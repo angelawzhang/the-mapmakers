@@ -3,18 +3,10 @@
   // our interactive data
   // export let migration_medium_data = [];
   let migration_medium_data = [
-    { index: 0, size: 893, name: "Illegally with Coyote" },
-    { index: 1, size: 338, name: "Illegally Independently" },
-    { index: 2, size: 115, name: "National Identity Document" },
-    { index: 3, size: 95, name: "Tourist Visa" },
-    { index: 4, size: 47, name: "Passport, No Visa Required" },
-    { index: 5, size: 45, name: "Other" },
-    { index: 6, size: 38, name: "Illegally via Caravans" },
-    { index: 7, size: 32, name: "Foreign Residence" },
-    { index: 8, size: 29, name: "Work Visa" },
-    { index: 9, size: 9, name: "Papers from Mexico" },
-    { index: 10, size: 7, name: "Student Visa" },
-    { index: 11, size: 4, name: "Refuge/Asylum" },
+    { index: 0, size: 893, name: "Yes, you reside in the destination country" },
+    { index: 1, size: 338, name: "Not yet, in transit to destination country" },
+    { index: 2, size: 115, name: "Passed away / disappeared" },
+    { index: 3, size: 95, name: "Returned to country of origin" },
   ];
 
   let arcGenerator = d3
@@ -26,7 +18,6 @@
 
   let pieAngleGenerator = d3.pie().value((d) => d[0]);
   let arc_data = [];
-  // let names = ["Tourist Visa", "Work Visa", "Student Visa"];
 
   const arc_color = d3
     .scaleLinear()
@@ -84,7 +75,7 @@
       40}px; top: {recorded_mouse_position.y + 40}px"
   >
     {#if hovered !== -1}
-      {arc_data[hovered].data[0]}% of people migrated
+      {arc_data[hovered].data[0]} people responded: 
       {migration_medium_data[arc_data[hovered].index].name}
     {/if}
   </div>

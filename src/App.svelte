@@ -2,7 +2,9 @@
   import { json } from "d3";
   import Marks from "./Marks.svelte";
   import Pie from "./Pie.svelte";
+  import Pie2 from "./Pie2.svelte";
   import BarChart from "./BarChart.svelte";
+  import BarChart2 from "./BarChart2.svelte";
   import Sankey from "./Sankey/Sankey.svelte";
   // import graph from "./Sankey/graph";
 
@@ -18,9 +20,11 @@
 
 <main>
   <section class="graph">
-    <h2 style="margin-top: 15px">Legal vs. Illegal Migration</h2>
-    <Pie />
+    
     <BarChart />
+    <BarChart2 />
     <Sankey />
+    <Pie />
+    <Pie2 />
   </section>
 </main>
