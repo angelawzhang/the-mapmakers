@@ -1,7 +1,21 @@
 <script>
   import * as d3 from "d3";
   // our interactive data
-  export let todo_record = [];
+  // export let migration_medium_data = [];
+  let migration_medium_data = [
+    { index: 0, size: 893, name: "Illegally with Coyote" },
+    { index: 1, size: 338, name: "Illegally Independently" },
+    { index: 2, size: 115, name: "National Identity Document" },
+    { index: 3, size: 95, name: "Tourist Visa" },
+    { index: 4, size: 47, name: "Passport, No Visa Required" },
+    { index: 5, size: 45, name: "Other" },
+    { index: 6, size: 38, name: "Illegally via Caravans" },
+    { index: 7, size: 32, name: "Foreign Residence" },
+    { index: 8, size: 29, name: "Work Visa" },
+    { index: 9, size: 9, name: "Papers from Mexico" },
+    { index: 10, size: 7, name: "Student Visa" },
+    { index: 11, size: 4, name: "Refuge/Asylum" },
+  ];
 
   let arcGenerator = d3
     .arc()
@@ -12,11 +26,12 @@
 
   let pieAngleGenerator = d3.pie().value((d) => d[0]);
   let arc_data = [];
+  // let names = ["Tourist Visa", "Work Visa", "Student Visa"];
 
   const arc_color = d3
     .scaleLinear()
     .range(["#faffd1", "#db921d", "#b86a04", "#a65d29", "#6e3003"])
-    .domain([0, 3, 6, 9, 12]);
+    .domain([0, 15, 30, 45, 60]);
 
   let hovered = -1;
 
@@ -27,13 +42,13 @@
 
   $: {
     // interactive data here
-    let todo_count_by_size = d3.rollups(
-      todo_record,
+    let migration_medium_counts = d3.rollups(
+      migration_medium_data,
       (v) => v.length,
       (d) => d.size
     );
 
-    arc_data = pieAngleGenerator(todo_count_by_size);
+    arc_data = pieAngleGenerator(migration_medium_counts);
     console.log(arc_data);
   }
 </script>
@@ -47,7 +62,7 @@
             startAngle: data.startAngle,
             endAngle: data.endAngle,
           })}
-          fill={index === hovered ? "brown" : arc_color(data.data[1])}
+          fill={index === hovered ? "brown" : arc_color(data.data[0])}
           on:mouseover={(event) => {
             hovered = index;
             recorded_mouse_position = {
@@ -69,13 +84,7 @@
   >
     {#if hovered !== -1}
       {arc_data[hovered].data[0]}% of people migrated
-      {#if arc_data[hovered].index === 0}
-        legally
-      {:else if arc_data[hovered].index === 1}
-        illegally independently
-      {:else if arc_data[hovered].index === 2}
-        illegally with a coyote
-      {/if}
+      {migration_medium_data[arc_data[hovered].index].name}
     {/if}
   </div>
 </div>
