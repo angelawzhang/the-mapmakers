@@ -19,7 +19,10 @@
     "svelte": "^3.55.0"
   },
   "dependencies": {
+    "@rollup/plugin-image": "^3.0.2",
     "d3": "^7.8.4",
+    "in-view": "^0.6.1",
+    "mapbox-gl": "^2.14.1",
     "sirv-cli": "^2.0.0",
     "d3-array": "^2.4.0",
     "d3-sankey": "^0.12.3",
