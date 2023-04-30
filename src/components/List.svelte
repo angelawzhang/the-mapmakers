@@ -47,6 +47,7 @@
     <div class="list-item" id="list-item-{index}">
       <h2>{item.name}</h2>
       <p>{item.description}</p>
+      <!-- Add Svelte components for each section here; add additional ifs accordingly -->
       {#if item.name === "Honduras"}
         <Pie />
       {:else if item.name === "Guatemala"}
