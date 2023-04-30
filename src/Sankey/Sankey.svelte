@@ -37,10 +37,25 @@
   export let nodeWidth = undefined;
   export let nodePadding = 0;
   export let nodeSort = undefined;
-  export let extent = [[1, 1], [width - 1, height - 6]];
+  export let extent = [
+    [1, 1],
+    [width - 1, height - 6],
+  ];
   export let iterations = undefined;
 
   const color = scaleSequential(interpolateCool);
+  console.log(color);
+
+  export let colors = [
+    "#E8B0D1",
+    "#32DCE3",
+    "#ECDC8F",
+    "#01CA97",
+    "#F4AD6A",
+    "#4997D0",
+    "#67923D",
+  ];
+  console.log(colors);
 
   let nodes, links;
   $: {
@@ -57,9 +72,10 @@
     const data = sankey(graph);
     nodes = data.nodes;
     links = data.links;
+    console.log(links);
 
     // Set color domain after sankey() has set depth
-    color.domain(d3Extent(nodes, (d) => d.depth));
+    // color.domain(d3Extent(nodes, (d) => d.depth));
   }
 
   const path = linkHorizontal()
@@ -71,6 +87,110 @@
   let highlightLinkIndexes = [];
 </script>
 
+<div>
+  <h2 style="margin-top: 15px">
+    Occupations Before and After Migrating to Another Country
+  </h2>
+
+  <div class="measure" bind:offsetWidth={width} bind:offsetHeight={height} />
+
+  <svg
+    width={width + margin.left + margin.right}
+    height={height + margin.top + margin.bottom}
+  >
+    <g>
+      <g>
+        {#each links as link, i (`link-${i}`)}
+          <path
+            key={`link-${i}`}
+            d={path(link) || undefined}
+            stroke={highlightLinkIndexes.includes(i)
+              ? colors[link.source.index]
+              : "black"}
+            stroke-width={Math.max(1, link.width)}
+            opacity={highlightLinkIndexes.includes(i) ? 0.5 : 0.1}
+            fill="none"
+            on:mouseover={(e) => {
+              highlightLinkIndexes = [i];
+              linkHovered = i;
+              recorded_mouse_position = {
+                x: event.pageX,
+                y: event.pageY,
+              };
+            }}
+            on:mouseout={(e) => {
+              highlightLinkIndexes = [i];
+              linkHovered = -1;
+            }}
+          />
+        {/each}
+      </g>
+
+      {#each nodes as node, i (`node-${i}`)}
+        <Group top={node.y0} left={node.x0}>
+          <rect
+            id={`rect-${i}`}
+            width={node.x1 - node.x0}
+            height={node.y1 - node.y0}
+            fill={node.color}
+            opacity={0.5}
+            stroke="white"
+            stroke-width={2}
+            on:mouseover={(e) => {
+              highlightLinkIndexes = [
+                ...node.sourceLinks.map((l) => l.index),
+                ...node.targetLinks.map((l) => l.index),
+              ];
+              nodeHovered = i;
+              recorded_mouse_position = {
+                x: event.pageX,
+                y: event.pageY,
+              };
+            }}
+            on:mouseout={(e) => {
+              highlightLinkIndexes = [];
+              nodeHovered = -1;
+            }}
+          />
+
+          <text
+            x={30}
+            y={(node.y1 - node.y0) / 2}
+            dy={5}
+            style="font: 16px sans-serif"
+            _verticalAnchor="middle"
+          >
+            {node.name}
+          </text>
+        </Group>
+      {/each}
+    </g>
+  </svg>
+
+  <div
+    class={nodeHovered === -1 ? "tooltip-hidden" : "tooltip-visible"}
+    style="left: {recorded_mouse_position.x +
+      40}px; top: {recorded_mouse_position.y + 40}px"
+  >
+    {#if nodeHovered !== -1}
+      <p>Occupation: {nodes[nodeHovered].name}</p>
+      <p>Number of People: {nodes[nodeHovered].value}</p>
+    {/if}
+  </div>
+
+  <div
+    class={linkHovered === -1 ? "tooltip-hidden" : "tooltip-visible"}
+    style="left: {recorded_mouse_position.x +
+      40}px; top: {recorded_mouse_position.y + 40}px"
+  >
+    {#if linkHovered !== -1}
+      <p>Number of People: {links[linkHovered].value}</p>
+      {links[linkHovered].source.name} → {links[linkHovered].target.name}
+    {/if}
+  </div>
+
+  <div class="measure" bind:offsetWidth={width} bind:offsetHeight={height} />
+</div>
 
 <style>
   .graph {
@@ -109,99 +229,3 @@
     padding: 10px;
   }
 </style>
-
-<div>
-  <h2 style="margin-top: 15px">Occupations Before and After Migrating to Another Country</h2>
-
-  <div class="measure" bind:offsetWidth={width} bind:offsetHeight={height} />
-  
-  <svg
-  width={width + margin.left + margin.right}
-  height={height + margin.top + margin.bottom}>
-  <g>
-    <g>
-      {#each links as link, i (`link-${i}`)}
-        <path
-          key={`link-${i}`}
-          d={path(link) || undefined}
-          stroke={highlightLinkIndexes.includes(i) ? 'red' : 'black'}
-          stroke-width={Math.max(1, link.width)}
-          opacity={highlightLinkIndexes.includes(i) ? 0.5 : 0.1}
-          fill="none"
-          on:mouseover={(e) => {
-            highlightLinkIndexes = [i];
-            linkHovered = i;
-            recorded_mouse_position = {
-              x: event.pageX,
-              y: event.pageY,
-            };
-          }}
-          on:mouseout={(e) => {
-            highlightLinkIndexes = [i];
-            linkHovered = -1;
-          }} />
-      {/each}
-    </g>
-
-    {#each nodes as node, i (`node-${i}`)}
-      <Group top={node.y0} left={node.x0}>
-        <rect
-          id={`rect-${i}`}
-          width={node.x1 - node.x0}
-          height={node.y1 - node.y0}
-          fill={color(node.depth)}
-          opacity={0.5}
-          stroke="white"
-          stroke-width={2}
-          on:mouseover={(e) => {
-            highlightLinkIndexes = [...node.sourceLinks.map((l) => l.index), ...node.targetLinks.map((l) => l.index)];
-            nodeHovered = i;
-            recorded_mouse_position = {
-              x: event.pageX,
-              y: event.pageY,
-            };
-          }}
-          on:mouseout={(e) => {
-            highlightLinkIndexes = [];
-            nodeHovered = -1;
-          }} />
-
-        <text
-          x={30}
-          y={(node.y1 - node.y0) / 2}
-          dy={5}
-          style="font: 16px sans-serif"
-          _verticalAnchor="middle">
-          {node.name}
-        </text>
-      </Group>
-    {/each}
-
-    </g>
-  </svg>
-
-  <div
-    class={nodeHovered === -1 ? "tooltip-hidden" : "tooltip-visible"}
-    style="left: {recorded_mouse_position.x +
-      40}px; top: {recorded_mouse_position.y + 40}px"
-  >
-    {#if nodeHovered !== -1}
-      <p>Occupation: {nodes[nodeHovered].name}</p>
-      <p>Number of People: {nodes[nodeHovered].value}</p>
-    {/if}
-  </div>
-
-  <div
-    class={linkHovered === -1 ? "tooltip-hidden" : "tooltip-visible"}
-    style="left: {recorded_mouse_position.x +
-      40}px; top: {recorded_mouse_position.y + 40}px"
-  >
-    {#if linkHovered !== -1}
-      <p>Number of People: {links[linkHovered].value}</p>
-      {links[linkHovered].source.name} → {links[linkHovered].target.name}
-    {/if}
-  </div>
-
-  <div class="measure" bind:offsetWidth={width} bind:offsetHeight={height} /> 
-
-</div>
