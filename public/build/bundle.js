@@ -74,9 +74,6 @@ var app = (function () {
     function space() {
         return text$1(' ');
     }
-    function empty$3() {
-        return text$1('');
-    }
     function listen(node, event, handler, options) {
         node.addEventListener(event, handler, options);
         return () => node.removeEventListener(event, handler, options);
@@ -609,7 +606,7 @@ var app = (function () {
     const activeListItem = writable(0);
     const activeMapItem = writable(0);
 
-    function ascending$3(a, b) {
+    function ascending$4(a, b) {
       return a == null || b == null ? NaN : a < b ? -1 : a > b ? 1 : a >= b ? 0 : NaN;
     }
 
@@ -621,7 +618,7 @@ var app = (function () {
         : NaN;
     }
 
-    function bisector(f) {
+    function bisector$1(f) {
       let compare1, compare2, delta;
 
       // If an accessor is specified, promote it to a comparator. In this case we
@@ -630,11 +627,11 @@ var app = (function () {
       // tell if the comparator is symmetric, and an asymmetric comparator can’t be
       // used to test whether a single value is comparable.
       if (f.length !== 2) {
-        compare1 = ascending$3;
-        compare2 = (d, x) => ascending$3(f(d), x);
+        compare1 = ascending$4;
+        compare2 = (d, x) => ascending$4(f(d), x);
         delta = (d, x) => f(d) - x;
       } else {
-        compare1 = f === ascending$3 || f === descending$2 ? f : zero$1;
+        compare1 = f === ascending$4 || f === descending$2 ? f : zero$1;
         compare2 = f;
         delta = f;
       }
@@ -696,10 +693,10 @@ var app = (function () {
       }
     }
 
-    const ascendingBisect = bisector(ascending$3);
+    const ascendingBisect = bisector$1(ascending$4);
     const bisectRight = ascendingBisect.right;
     const bisectLeft = ascendingBisect.left;
-    const bisectCenter = bisector(number$3).center;
+    const bisectCenter = bisector$1(number$3).center;
     var bisect = bisectRight;
 
     function blur(values, r) {
@@ -707,7 +704,7 @@ var app = (function () {
       let length = values.length;
       if (!((length = Math.floor(length)) >= 0)) throw new RangeError("invalid length");
       if (!length || !r) return values;
-      const blur = blurf(r);
+      const blur = blurf$1(r);
       const temp = values.slice();
       blur(values, temp, 0, length, 1);
       blur(temp, values, 0, length, 1);
@@ -715,11 +712,11 @@ var app = (function () {
       return values;
     }
 
-    const blur2 = Blur2(blurf);
+    const blur2$1 = Blur2$1(blurf$1);
 
-    const blurImage = Blur2(blurfImage);
+    const blurImage = Blur2$1(blurfImage);
 
-    function Blur2(blur) {
+    function Blur2$1(blur) {
       return function(data, rx, ry = rx) {
         if (!((rx = +rx) >= 0)) throw new RangeError("invalid rx");
         if (!((ry = +ry) >= 0)) throw new RangeError("invalid ry");
@@ -731,39 +728,39 @@ var app = (function () {
         const blury = ry && blur(ry);
         const temp = values.slice();
         if (blurx && blury) {
-          blurh(blurx, temp, values, width, height);
-          blurh(blurx, values, temp, width, height);
-          blurh(blurx, temp, values, width, height);
-          blurv(blury, values, temp, width, height);
-          blurv(blury, temp, values, width, height);
-          blurv(blury, values, temp, width, height);
+          blurh$1(blurx, temp, values, width, height);
+          blurh$1(blurx, values, temp, width, height);
+          blurh$1(blurx, temp, values, width, height);
+          blurv$1(blury, values, temp, width, height);
+          blurv$1(blury, temp, values, width, height);
+          blurv$1(blury, values, temp, width, height);
         } else if (blurx) {
-          blurh(blurx, values, temp, width, height);
-          blurh(blurx, temp, values, width, height);
-          blurh(blurx, values, temp, width, height);
+          blurh$1(blurx, values, temp, width, height);
+          blurh$1(blurx, temp, values, width, height);
+          blurh$1(blurx, values, temp, width, height);
         } else if (blury) {
-          blurv(blury, values, temp, width, height);
-          blurv(blury, temp, values, width, height);
-          blurv(blury, values, temp, width, height);
+          blurv$1(blury, values, temp, width, height);
+          blurv$1(blury, temp, values, width, height);
+          blurv$1(blury, values, temp, width, height);
         }
         return data;
       };
     }
 
-    function blurh(blur, T, S, w, h) {
+    function blurh$1(blur, T, S, w, h) {
       for (let y = 0, n = w * h; y < n;) {
         blur(T, S, y, y += w, 1);
       }
     }
 
-    function blurv(blur, T, S, w, h) {
+    function blurv$1(blur, T, S, w, h) {
       for (let x = 0, n = w * h; x < w; ++x) {
         blur(T, S, x, x + n, w);
       }
     }
 
     function blurfImage(radius) {
-      const blur = blurf(radius);
+      const blur = blurf$1(radius);
       return (T, S, start, stop, step) => {
         start <<= 2, stop <<= 2, step <<= 2;
         blur(T, S, start + 0, stop + 0, step);
@@ -779,9 +776,9 @@ var app = (function () {
     // S[start] (inclusive) and S[stop] (exclusive). If the given radius is not an
     // integer, S[i - r - 1] and S[i + r + 1] are added to the sum, each weighted
     // according to r - ⌊radius⌋.
-    function blurf(radius) {
+    function blurf$1(radius) {
       const radius0 = Math.floor(radius);
-      if (radius0 === radius) return bluri(radius);
+      if (radius0 === radius) return bluri$1(radius);
       const t = radius - radius0;
       const w = 2 * radius + 1;
       return (T, S, start, stop, step) => { // stop must be aligned!
@@ -801,7 +798,7 @@ var app = (function () {
     }
 
     // Like blurf, but optimized for integer radius.
-    function bluri(radius) {
+    function bluri$1(radius) {
       const w = 2 * radius + 1;
       return (T, S, start, stop, step) => { // stop must be aligned!
         if (!((stop -= step) >= start)) return; // inclusive stop
@@ -818,7 +815,7 @@ var app = (function () {
       };
     }
 
-    function count$1(values, valueof) {
+    function count$2(values, valueof) {
       let count = 0;
       if (valueof === undefined) {
         for (let value of values) {
@@ -909,7 +906,7 @@ var app = (function () {
       return v ? Math.sqrt(v) : v;
     }
 
-    function extent$1(values, valueof) {
+    function extent$2(values, valueof) {
       let min;
       let max;
       if (valueof === undefined) {
@@ -940,7 +937,7 @@ var app = (function () {
     }
 
     // https://github.com/python/cpython/blob/a74eea238f5baba15797e2e8b570d153bc8690a7/Modules/mathmodule.c#L1423
-    class Adder {
+    let Adder$1 = class Adder {
       constructor() {
         this._partials = new Float64Array(32);
         this._n = 0;
@@ -979,10 +976,10 @@ var app = (function () {
         }
         return hi;
       }
-    }
+    };
 
     function fsum(values, valueof) {
-      const adder = new Adder();
+      const adder = new Adder$1();
       if (valueof === undefined) {
         for (let value of values) {
           if (value = +value) {
@@ -1001,7 +998,7 @@ var app = (function () {
     }
 
     function fcumsum(values, valueof) {
-      const adder = new Adder();
+      const adder = new Adder$1();
       let index = -1;
       return Float64Array.from(values, valueof === undefined
           ? v => adder.add(+v || 0)
@@ -1061,7 +1058,7 @@ var app = (function () {
     function intern_delete({_intern, _key}, value) {
       const key = _key(value);
       if (_intern.has(key)) {
-        value = _intern.get(key);
+        value = _intern.get(value);
         _intern.delete(key);
       }
       return value;
@@ -1083,7 +1080,7 @@ var app = (function () {
       return nest(values, Array.from, identity$9, keys);
     }
 
-    function flatten$1(groups, keys) {
+    function flatten$2(groups, keys) {
       for (let i = 1, n = keys.length; i < n; ++i) {
         groups = groups.flatMap(g => g.pop().map(([key, value]) => [...g, key, value]));
       }
@@ -1091,11 +1088,11 @@ var app = (function () {
     }
 
     function flatGroup(values, ...keys) {
-      return flatten$1(groups(values, ...keys), keys);
+      return flatten$2(groups(values, ...keys), keys);
     }
 
     function flatRollup(values, reduce, ...keys) {
-      return flatten$1(rollups(values, reduce, ...keys), keys);
+      return flatten$2(rollups(values, reduce, ...keys), keys);
     }
 
     function rollup(values, reduce, ...keys) {
@@ -1165,8 +1162,8 @@ var app = (function () {
       return values.sort(compareDefined(f));
     }
 
-    function compareDefined(compare = ascending$3) {
-      if (compare === ascending$3) return ascendingDefined;
+    function compareDefined(compare = ascending$4) {
+      if (compare === ascending$4) return ascendingDefined;
       if (typeof compare !== "function") throw new TypeError("compare is not a function");
       return (a, b) => {
         const x = compare(a, b);
@@ -1181,8 +1178,8 @@ var app = (function () {
 
     function groupSort(values, reduce, key) {
       return (reduce.length !== 2
-        ? sort(rollup(values, reduce, key), (([ak, av], [bk, bv]) => ascending$3(av, bv) || ascending$3(ak, bk)))
-        : sort(group(values, key), (([ak, av], [bk, bv]) => reduce(av, bv) || ascending$3(ak, bk))))
+        ? sort(rollup(values, reduce, key), (([ak, av], [bk, bv]) => ascending$4(av, bv) || ascending$4(ak, bk)))
+        : sort(group(values, key), (([ak, av], [bk, bv]) => reduce(av, bv) || ascending$4(ak, bk))))
         .map(([key]) => key);
     }
 
@@ -1194,15 +1191,15 @@ var app = (function () {
       return () => x;
     }
 
-    const e10 = Math.sqrt(50),
-        e5 = Math.sqrt(10),
-        e2 = Math.sqrt(2);
+    const e10$2 = Math.sqrt(50),
+        e5$2 = Math.sqrt(10),
+        e2$2 = Math.sqrt(2);
 
-    function tickSpec(start, stop, count) {
+    function tickSpec$1(start, stop, count) {
       const step = (stop - start) / Math.max(0, count),
           power = Math.floor(Math.log10(step)),
           error = step / Math.pow(10, power),
-          factor = error >= e10 ? 10 : error >= e5 ? 5 : error >= e2 ? 2 : 1;
+          factor = error >= e10$2 ? 10 : error >= e5$2 ? 5 : error >= e2$2 ? 2 : 1;
       let i1, i2, inc;
       if (power < 0) {
         inc = Math.pow(10, -power) / factor;
@@ -1218,15 +1215,15 @@ var app = (function () {
         if (i1 * inc < start) ++i1;
         if (i2 * inc > stop) --i2;
       }
-      if (i2 < i1 && 0.5 <= count && count < 2) return tickSpec(start, stop, count * 2);
+      if (i2 < i1 && 0.5 <= count && count < 2) return tickSpec$1(start, stop, count * 2);
       return [i1, i2, inc];
     }
 
-    function ticks(start, stop, count) {
+    function ticks$1(start, stop, count) {
       stop = +stop, start = +start, count = +count;
       if (!(count > 0)) return [];
       if (start === stop) return [start];
-      const reverse = stop < start, [i1, i2, inc] = reverse ? tickSpec(stop, start, count) : tickSpec(start, stop, count);
+      const reverse = stop < start, [i1, i2, inc] = reverse ? tickSpec$1(stop, start, count) : tickSpec$1(start, stop, count);
       if (!(i2 >= i1)) return [];
       const n = i2 - i1 + 1, ticks = new Array(n);
       if (reverse) {
@@ -1239,21 +1236,21 @@ var app = (function () {
       return ticks;
     }
 
-    function tickIncrement(start, stop, count) {
+    function tickIncrement$1(start, stop, count) {
       stop = +stop, start = +start, count = +count;
-      return tickSpec(start, stop, count)[2];
+      return tickSpec$1(start, stop, count)[2];
     }
 
-    function tickStep(start, stop, count) {
+    function tickStep$1(start, stop, count) {
       stop = +stop, start = +start, count = +count;
-      const reverse = stop < start, inc = reverse ? tickIncrement(stop, start, count) : tickIncrement(start, stop, count);
+      const reverse = stop < start, inc = reverse ? tickIncrement$1(stop, start, count) : tickIncrement$1(start, stop, count);
       return (reverse ? -1 : 1) * (inc < 0 ? 1 / -inc : inc);
     }
 
-    function nice$1(start, stop, count) {
+    function nice$2(start, stop, count) {
       let prestep;
       while (true) {
-        const step = tickIncrement(start, stop, count);
+        const step = tickIncrement$1(start, stop, count);
         if (step === prestep || step === 0 || !isFinite(step)) {
           return [start, stop];
         } else if (step > 0) {
@@ -1267,14 +1264,14 @@ var app = (function () {
       }
     }
 
-    function thresholdSturges(values) {
-      return Math.max(1, Math.ceil(Math.log(count$1(values)) / Math.LN2) + 1);
+    function thresholdSturges$1(values) {
+      return Math.max(1, Math.ceil(Math.log(count$2(values)) / Math.LN2) + 1);
     }
 
     function bin() {
       var value = identity$9,
-          domain = extent$1,
-          threshold = thresholdSturges;
+          domain = extent$2,
+          threshold = thresholdSturges$1;
 
       function histogram(data) {
         if (!Array.isArray(data)) data = Array.from(data);
@@ -1298,13 +1295,13 @@ var app = (function () {
         // default domain accordingly.
         if (!Array.isArray(tz)) {
           const max = x1, tn = +tz;
-          if (domain === extent$1) [x0, x1] = nice$1(x0, x1, tn);
-          tz = ticks(x0, x1, tn);
+          if (domain === extent$2) [x0, x1] = nice$2(x0, x1, tn);
+          tz = ticks$1(x0, x1, tn);
 
           // If the domain is aligned with the first tick (which it will by
           // default), then we can use quantization rather than bisection to bin
           // values, which is substantially faster.
-          if (tz[0] <= x0) step = tickIncrement(x0, x1, tn);
+          if (tz[0] <= x0) step = tickIncrement$1(x0, x1, tn);
 
           // If the last threshold is coincident with the domain’s upper bound, the
           // last bin will be zero-width. If the default domain is used, and this
@@ -1314,8 +1311,8 @@ var app = (function () {
           // coerce values or the domain to numbers, and thus must be careful to
           // compare order (>=) rather than strict equality (===)!
           if (tz[tz.length - 1] >= x1) {
-            if (max >= x1 && domain === extent$1) {
-              const step = tickIncrement(x0, x1, tn);
+            if (max >= x1 && domain === extent$2) {
+              const step = tickIncrement$1(x0, x1, tn);
               if (isFinite(step)) {
                 if (step > 0) {
                   x1 = (Math.floor(x1 / step) + 1) * step;
@@ -1388,7 +1385,7 @@ var app = (function () {
       return histogram;
     }
 
-    function max$3(values, valueof) {
+    function max$4(values, valueof) {
       let max;
       if (valueof === undefined) {
         for (const value of values) {
@@ -1528,7 +1525,7 @@ var app = (function () {
       array[j] = t;
     }
 
-    function greatest(values, compare = ascending$3) {
+    function greatest(values, compare = ascending$4) {
       let max;
       let defined = false;
       if (compare.length === 1) {
@@ -1536,8 +1533,8 @@ var app = (function () {
         for (const element of values) {
           const value = compare(element);
           if (defined
-              ? ascending$3(value, maxValue) > 0
-              : ascending$3(value, value) === 0) {
+              ? ascending$4(value, maxValue) > 0
+              : ascending$4(value, value) === 0) {
             max = element;
             maxValue = value;
             defined = true;
@@ -1560,11 +1557,11 @@ var app = (function () {
       values = Float64Array.from(numbers(values, valueof));
       if (!(n = values.length) || isNaN(p = +p)) return;
       if (p <= 0 || n < 2) return min$2(values);
-      if (p >= 1) return max$3(values);
+      if (p >= 1) return max$4(values);
       var n,
           i = (n - 1) * p,
           i0 = Math.floor(i),
-          value0 = max$3(quickselect(values, i0).subarray(0, i0 + 1)),
+          value0 = max$4(quickselect(values, i0).subarray(0, i0 + 1)),
           value1 = min$2(values.subarray(i0 + 1));
       return value0 + (value1 - value0) * (i - i0);
     }
@@ -1594,12 +1591,12 @@ var app = (function () {
     }
 
     function thresholdFreedmanDiaconis(values, min, max) {
-      const c = count$1(values), d = quantile$1(values, 0.75) - quantile$1(values, 0.25);
+      const c = count$2(values), d = quantile$1(values, 0.75) - quantile$1(values, 0.25);
       return c && d ? Math.ceil((max - min) / (2 * d * Math.pow(c, -1 / 3))) : 1;
     }
 
     function thresholdScott(values, min, max) {
-      const c = count$1(values), d = deviation(values);
+      const c = count$2(values), d = deviation(values);
       return c && d ? Math.ceil((max - min) * Math.cbrt(c) / (3.49 * d)) : 1;
     }
 
@@ -1631,14 +1628,14 @@ var app = (function () {
       return quantileIndex(values, 0.5, valueof);
     }
 
-    function* flatten(arrays) {
+    function* flatten$1(arrays) {
       for (const array of arrays) {
         yield* array;
       }
     }
 
-    function merge(arrays) {
-      return Array.from(flatten(arrays));
+    function merge$1(arrays) {
+      return Array.from(flatten$1(arrays));
     }
 
     function mode(values, valueof) {
@@ -1684,7 +1681,7 @@ var app = (function () {
       return [a, b];
     }
 
-    function range$2(start, stop, step) {
+    function range$3(start, stop, step) {
       start = +start, stop = +stop, step = (n = arguments.length) < 2 ? (stop = start, start = 0, 1) : n < 3 ? 1 : +step;
 
       var i = -1,
@@ -1698,16 +1695,16 @@ var app = (function () {
       return range;
     }
 
-    function rank(values, valueof = ascending$3) {
+    function rank(values, valueof = ascending$4) {
       if (typeof values[Symbol.iterator] !== "function") throw new TypeError("values is not iterable");
       let V = Array.from(values);
       const R = new Float64Array(V.length);
-      if (valueof.length !== 2) V = V.map(valueof), valueof = ascending$3;
+      if (valueof.length !== 2) V = V.map(valueof), valueof = ascending$4;
       const compareIndex = (i, j) => valueof(V[i], V[j]);
       let k, r;
       values = Uint32Array.from(V, (_, i) => i);
       // Risky chaining due to Safari 14 https://github.com/d3/d3-array/issues/123
-      values.sort(valueof === ascending$3 ? (i, j) => ascendingDefined(V[i], V[j]) : compareDefined(compareIndex));
+      values.sort(valueof === ascending$4 ? (i, j) => ascendingDefined(V[i], V[j]) : compareDefined(compareIndex));
       values.forEach((j, i) => {
           const c = compareIndex(j, k === undefined ? j : k);
           if (c >= 0) {
@@ -1720,7 +1717,7 @@ var app = (function () {
       return R;
     }
 
-    function least(values, compare = ascending$3) {
+    function least(values, compare = ascending$4) {
       let min;
       let defined = false;
       if (compare.length === 1) {
@@ -1728,8 +1725,8 @@ var app = (function () {
         for (const element of values) {
           const value = compare(element);
           if (defined
-              ? ascending$3(value, minValue) < 0
-              : ascending$3(value, value) === 0) {
+              ? ascending$4(value, minValue) < 0
+              : ascending$4(value, value) === 0) {
             min = element;
             minValue = value;
             defined = true;
@@ -1748,7 +1745,7 @@ var app = (function () {
       return min;
     }
 
-    function leastIndex(values, compare = ascending$3) {
+    function leastIndex(values, compare = ascending$4) {
       if (compare.length === 1) return minIndex(values, compare);
       let minValue;
       let min = -1;
@@ -1765,7 +1762,7 @@ var app = (function () {
       return min;
     }
 
-    function greatestIndex(values, compare = ascending$3) {
+    function greatestIndex(values, compare = ascending$4) {
       if (compare.length === 1) return maxIndex(values, compare);
       let maxValue;
       let max = -1;
@@ -2606,7 +2603,7 @@ var app = (function () {
     }
 
     function selection_sort(compare) {
-      if (!compare) compare = ascending$2;
+      if (!compare) compare = ascending$3;
 
       function compareNode(a, b) {
         return a && b ? compare(a.__data__, b.__data__) : !a - !b;
@@ -2624,7 +2621,7 @@ var app = (function () {
       return new Selection$1(sortgroups, this._parents).order();
     }
 
-    function ascending$2(a, b) {
+    function ascending$3(a, b) {
       return a < b ? -1 : a > b ? 1 : a >= b ? 0 : NaN;
     }
 
@@ -5898,7 +5895,7 @@ var app = (function () {
         MODE_HANDLE = {name: "handle"},
         MODE_CENTER = {name: "center"};
 
-    const {abs: abs$3, max: max$2, min: min$1} = Math;
+    const {abs: abs$3, max: max$3, min: min$1} = Math;
 
     function number1(e) {
       return [+e[0], +e[1]];
@@ -6257,8 +6254,8 @@ var app = (function () {
               w0 = dim === Y ? W : min$1(pts[0][0], pts[1][0]),
               n0 = dim === X ? N : min$1(pts[0][1], pts[1][1])
             ], [
-              e0 = dim === Y ? E : max$2(pts[0][0], pts[1][0]),
-              s0 = dim === X ? S : max$2(pts[0][1], pts[1][1])
+              e0 = dim === Y ? E : max$3(pts[0][0], pts[1][0]),
+              s0 = dim === X ? S : max$3(pts[0][1], pts[1][1])
             ]];
           if (points.length > 1) move(event);
         } else {
@@ -6325,25 +6322,25 @@ var app = (function () {
           switch (mode) {
             case MODE_SPACE:
             case MODE_DRAG: {
-              if (signX) dx = max$2(W - w0, min$1(E - e0, dx)), w1 = w0 + dx, e1 = e0 + dx;
-              if (signY) dy = max$2(N - n0, min$1(S - s0, dy)), n1 = n0 + dy, s1 = s0 + dy;
+              if (signX) dx = max$3(W - w0, min$1(E - e0, dx)), w1 = w0 + dx, e1 = e0 + dx;
+              if (signY) dy = max$3(N - n0, min$1(S - s0, dy)), n1 = n0 + dy, s1 = s0 + dy;
               break;
             }
             case MODE_HANDLE: {
               if (points[1]) {
-                if (signX) w1 = max$2(W, min$1(E, points[0][0])), e1 = max$2(W, min$1(E, points[1][0])), signX = 1;
-                if (signY) n1 = max$2(N, min$1(S, points[0][1])), s1 = max$2(N, min$1(S, points[1][1])), signY = 1;
+                if (signX) w1 = max$3(W, min$1(E, points[0][0])), e1 = max$3(W, min$1(E, points[1][0])), signX = 1;
+                if (signY) n1 = max$3(N, min$1(S, points[0][1])), s1 = max$3(N, min$1(S, points[1][1])), signY = 1;
               } else {
-                if (signX < 0) dx = max$2(W - w0, min$1(E - w0, dx)), w1 = w0 + dx, e1 = e0;
-                else if (signX > 0) dx = max$2(W - e0, min$1(E - e0, dx)), w1 = w0, e1 = e0 + dx;
-                if (signY < 0) dy = max$2(N - n0, min$1(S - n0, dy)), n1 = n0 + dy, s1 = s0;
-                else if (signY > 0) dy = max$2(N - s0, min$1(S - s0, dy)), n1 = n0, s1 = s0 + dy;
+                if (signX < 0) dx = max$3(W - w0, min$1(E - w0, dx)), w1 = w0 + dx, e1 = e0;
+                else if (signX > 0) dx = max$3(W - e0, min$1(E - e0, dx)), w1 = w0, e1 = e0 + dx;
+                if (signY < 0) dy = max$3(N - n0, min$1(S - n0, dy)), n1 = n0 + dy, s1 = s0;
+                else if (signY > 0) dy = max$3(N - s0, min$1(S - s0, dy)), n1 = n0, s1 = s0 + dy;
               }
               break;
             }
             case MODE_CENTER: {
-              if (signX) w1 = max$2(W, min$1(E, w0 - dx * signX)), e1 = max$2(W, min$1(E, e0 + dx * signX));
-              if (signY) n1 = max$2(N, min$1(S, n0 - dy * signY)), s1 = max$2(N, min$1(S, s0 + dy * signY));
+              if (signX) w1 = max$3(W, min$1(E, w0 - dx * signX)), e1 = max$3(W, min$1(E, e0 + dx * signX));
+              if (signY) n1 = max$3(N, min$1(S, n0 - dy * signY)), s1 = max$3(N, min$1(S, s0 + dy * signY));
               break;
             }
           }
@@ -6512,10 +6509,10 @@ var app = (function () {
     var pi$3 = Math.PI;
     var halfPi$2 = pi$3 / 2;
     var tau$4 = pi$3 * 2;
-    var max$1 = Math.max;
+    var max$2 = Math.max;
     var epsilon$5 = 1e-12;
 
-    function range$1(i, j) {
+    function range$2(i, j) {
       return Array.from({length: j - i}, (_, k) => i + k);
     }
 
@@ -6549,7 +6546,7 @@ var app = (function () {
       function chord(matrix) {
         var n = matrix.length,
             groupSums = new Array(n),
-            groupIndex = range$1(0, n),
+            groupIndex = range$2(0, n),
             chords = new Array(n * n),
             groups = new Array(n),
             k = 0, dx;
@@ -6564,7 +6561,7 @@ var app = (function () {
           for (let j = 0; j < n; ++j) x += matrix[i * n + j] + directed * matrix[j * n + i];
           k += groupSums[i] = x;
         }
-        k = max$1(0, tau$4 - padAngle * n) / k;
+        k = max$2(0, tau$4 - padAngle * n) / k;
         dx = k ? padAngle : tau$4 / n;
 
         // Compute the angles for each group and constituent chord.
@@ -6574,7 +6571,7 @@ var app = (function () {
           for (const i of groupIndex) {
             const x0 = x;
             if (directed) {
-              const subgroupIndex = range$1(~n + 1, n).filter(j => j < 0 ? matrix[~j * n + i] : matrix[i * n + j]);
+              const subgroupIndex = range$2(~n + 1, n).filter(j => j < 0 ? matrix[~j * n + i] : matrix[i * n + j]);
               if (sortSubgroups) subgroupIndex.sort((a, b) => sortSubgroups(a < 0 ? -matrix[~a * n + i] : matrix[i * n + a], b < 0 ? -matrix[~b * n + i] : matrix[i * n + b]));
               for (const j of subgroupIndex) {
                 if (j < 0) {
@@ -6587,7 +6584,7 @@ var app = (function () {
               }
               groups[i] = {index: i, startAngle: x0, endAngle: x, value: groupSums[i]};
             } else {
-              const subgroupIndex = range$1(0, n).filter(j => matrix[i * n + j] || matrix[j * n + i]);
+              const subgroupIndex = range$2(0, n).filter(j => matrix[i * n + j] || matrix[j * n + i]);
               if (sortSubgroups) subgroupIndex.sort((a, b) => sortSubgroups(matrix[i * n + a], matrix[i * n + b]));
               for (const j of subgroupIndex) {
                 let chord;
@@ -6618,7 +6615,7 @@ var app = (function () {
       }
 
       chord.padAngle = function(_) {
-        return arguments.length ? (padAngle = max$1(0, _), chord) : padAngle;
+        return arguments.length ? (padAngle = max$2(0, _), chord) : padAngle;
       };
 
       chord.sortGroups = function(_) {
@@ -6931,11 +6928,242 @@ var app = (function () {
       return ribbon(defaultArrowheadRadius);
     }
 
+    const blur2 = Blur2(blurf);
+
+    function Blur2(blur) {
+      return function(data, rx, ry = rx) {
+        if (!((rx = +rx) >= 0)) throw new RangeError("invalid rx");
+        if (!((ry = +ry) >= 0)) throw new RangeError("invalid ry");
+        let {data: values, width, height} = data;
+        if (!((width = Math.floor(width)) >= 0)) throw new RangeError("invalid width");
+        if (!((height = Math.floor(height !== undefined ? height : values.length / width)) >= 0)) throw new RangeError("invalid height");
+        if (!width || !height || (!rx && !ry)) return data;
+        const blurx = rx && blur(rx);
+        const blury = ry && blur(ry);
+        const temp = values.slice();
+        if (blurx && blury) {
+          blurh(blurx, temp, values, width, height);
+          blurh(blurx, values, temp, width, height);
+          blurh(blurx, temp, values, width, height);
+          blurv(blury, values, temp, width, height);
+          blurv(blury, temp, values, width, height);
+          blurv(blury, values, temp, width, height);
+        } else if (blurx) {
+          blurh(blurx, values, temp, width, height);
+          blurh(blurx, temp, values, width, height);
+          blurh(blurx, values, temp, width, height);
+        } else if (blury) {
+          blurv(blury, values, temp, width, height);
+          blurv(blury, temp, values, width, height);
+          blurv(blury, values, temp, width, height);
+        }
+        return data;
+      };
+    }
+
+    function blurh(blur, T, S, w, h) {
+      for (let y = 0, n = w * h; y < n;) {
+        blur(T, S, y, y += w, 1);
+      }
+    }
+
+    function blurv(blur, T, S, w, h) {
+      for (let x = 0, n = w * h; x < w; ++x) {
+        blur(T, S, x, x + n, w);
+      }
+    }
+
+    // Given a target array T, a source array S, sets each value T[i] to the average
+    // of {S[i - r], …, S[i], …, S[i + r]}, where r = ⌊radius⌋, start <= i < stop,
+    // for each i, i + step, i + 2 * step, etc., and where S[j] is clamped between
+    // S[start] (inclusive) and S[stop] (exclusive). If the given radius is not an
+    // integer, S[i - r - 1] and S[i + r + 1] are added to the sum, each weighted
+    // according to r - ⌊radius⌋.
+    function blurf(radius) {
+      const radius0 = Math.floor(radius);
+      if (radius0 === radius) return bluri(radius);
+      const t = radius - radius0;
+      const w = 2 * radius + 1;
+      return (T, S, start, stop, step) => { // stop must be aligned!
+        if (!((stop -= step) >= start)) return; // inclusive stop
+        let sum = radius0 * S[start];
+        const s0 = step * radius0;
+        const s1 = s0 + step;
+        for (let i = start, j = start + s0; i < j; i += step) {
+          sum += S[Math.min(stop, i)];
+        }
+        for (let i = start, j = stop; i <= j; i += step) {
+          sum += S[Math.min(stop, i + s0)];
+          T[i] = (sum + t * (S[Math.max(start, i - s1)] + S[Math.min(stop, i + s1)])) / w;
+          sum -= S[Math.max(start, i - s0)];
+        }
+      };
+    }
+
+    // Like blurf, but optimized for integer radius.
+    function bluri(radius) {
+      const w = 2 * radius + 1;
+      return (T, S, start, stop, step) => { // stop must be aligned!
+        if (!((stop -= step) >= start)) return; // inclusive stop
+        let sum = radius * S[start];
+        const s = step * radius;
+        for (let i = start, j = start + s; i < j; i += step) {
+          sum += S[Math.min(stop, i)];
+        }
+        for (let i = start, j = stop; i <= j; i += step) {
+          sum += S[Math.min(stop, i + s)];
+          T[i] = sum / w;
+          sum -= S[Math.max(start, i - s)];
+        }
+      };
+    }
+
+    function count$1(values, valueof) {
+      let count = 0;
+      if (valueof === undefined) {
+        for (let value of values) {
+          if (value != null && (value = +value) >= value) {
+            ++count;
+          }
+        }
+      } else {
+        let index = -1;
+        for (let value of values) {
+          if ((value = valueof(value, ++index, values)) != null && (value = +value) >= value) {
+            ++count;
+          }
+        }
+      }
+      return count;
+    }
+
+    function extent$1(values, valueof) {
+      let min;
+      let max;
+      if (valueof === undefined) {
+        for (const value of values) {
+          if (value != null) {
+            if (min === undefined) {
+              if (value >= value) min = max = value;
+            } else {
+              if (min > value) min = value;
+              if (max < value) max = value;
+            }
+          }
+        }
+      } else {
+        let index = -1;
+        for (let value of values) {
+          if ((value = valueof(value, ++index, values)) != null) {
+            if (min === undefined) {
+              if (value >= value) min = max = value;
+            } else {
+              if (min > value) min = value;
+              if (max < value) max = value;
+            }
+          }
+        }
+      }
+      return [min, max];
+    }
+
+    const e10$1 = Math.sqrt(50),
+        e5$1 = Math.sqrt(10),
+        e2$1 = Math.sqrt(2);
+
+    function tickSpec(start, stop, count) {
+      const step = (stop - start) / Math.max(0, count),
+          power = Math.floor(Math.log10(step)),
+          error = step / Math.pow(10, power),
+          factor = error >= e10$1 ? 10 : error >= e5$1 ? 5 : error >= e2$1 ? 2 : 1;
+      let i1, i2, inc;
+      if (power < 0) {
+        inc = Math.pow(10, -power) / factor;
+        i1 = Math.round(start * inc);
+        i2 = Math.round(stop * inc);
+        if (i1 / inc < start) ++i1;
+        if (i2 / inc > stop) --i2;
+        inc = -inc;
+      } else {
+        inc = Math.pow(10, power) * factor;
+        i1 = Math.round(start / inc);
+        i2 = Math.round(stop / inc);
+        if (i1 * inc < start) ++i1;
+        if (i2 * inc > stop) --i2;
+      }
+      if (i2 < i1 && 0.5 <= count && count < 2) return tickSpec(start, stop, count * 2);
+      return [i1, i2, inc];
+    }
+
+    function ticks(start, stop, count) {
+      stop = +stop, start = +start, count = +count;
+      if (!(count > 0)) return [];
+      if (start === stop) return [start];
+      const reverse = stop < start, [i1, i2, inc] = reverse ? tickSpec(stop, start, count) : tickSpec(start, stop, count);
+      if (!(i2 >= i1)) return [];
+      const n = i2 - i1 + 1, ticks = new Array(n);
+      if (reverse) {
+        if (inc < 0) for (let i = 0; i < n; ++i) ticks[i] = (i2 - i) / -inc;
+        else for (let i = 0; i < n; ++i) ticks[i] = (i2 - i) * inc;
+      } else {
+        if (inc < 0) for (let i = 0; i < n; ++i) ticks[i] = (i1 + i) / -inc;
+        else for (let i = 0; i < n; ++i) ticks[i] = (i1 + i) * inc;
+      }
+      return ticks;
+    }
+
+    function tickIncrement(start, stop, count) {
+      stop = +stop, start = +start, count = +count;
+      return tickSpec(start, stop, count)[2];
+    }
+
+    function nice$1(start, stop, count) {
+      let prestep;
+      while (true) {
+        const step = tickIncrement(start, stop, count);
+        if (step === prestep || step === 0 || !isFinite(step)) {
+          return [start, stop];
+        } else if (step > 0) {
+          start = Math.floor(start / step) * step;
+          stop = Math.ceil(stop / step) * step;
+        } else if (step < 0) {
+          start = Math.ceil(start * step) / step;
+          stop = Math.floor(stop * step) / step;
+        }
+        prestep = step;
+      }
+    }
+
+    function thresholdSturges(values) {
+      return Math.max(1, Math.ceil(Math.log(count$1(values)) / Math.LN2) + 1);
+    }
+
+    function max$1(values, valueof) {
+      let max;
+      if (valueof === undefined) {
+        for (const value of values) {
+          if (value != null
+              && (max < value || (max === undefined && value >= value))) {
+            max = value;
+          }
+        }
+      } else {
+        let index = -1;
+        for (let value of values) {
+          if ((value = valueof(value, ++index, values)) != null
+              && (max < value || (max === undefined && value >= value))) {
+            max = value;
+          }
+        }
+      }
+      return max;
+    }
+
     var array$2 = Array.prototype;
 
     var slice$1 = array$2.slice;
 
-    function ascending$1(a, b) {
+    function ascending$2(a, b) {
       return a - b;
     }
 
@@ -7012,7 +7240,7 @@ var app = (function () {
           while (tz[tz.length - 1] >= e[1]) tz.pop();
           while (tz[1] < e[0]) tz.shift();
         } else {
-          tz = tz.slice().sort(ascending$1);
+          tz = tz.slice().sort(ascending$2);
         }
 
         return tz.map(value => contour(values, value));
@@ -7252,7 +7480,7 @@ var app = (function () {
 
         // Convert number of thresholds into uniform thresholds.
         if (!Array.isArray(tz)) {
-          tz = ticks(Number.MIN_VALUE, max$3(values) / pow4k, tz);
+          tz = ticks(Number.MIN_VALUE, max$1(values) / pow4k, tz);
         }
 
         return Contours()
@@ -7272,7 +7500,7 @@ var app = (function () {
               c.value = value; // preserve exact threshold value
               return c;
             };
-        Object.defineProperty(contour, "max", {get: () => max$3(values) / pow4k});
+        Object.defineProperty(contour, "max", {get: () => max$1(values) / pow4k});
         return contour;
       };
 
@@ -10410,6 +10638,135 @@ var app = (function () {
       return Math.max(0, exponent(max) - exponent(step)) + 1;
     }
 
+    function ascending$1(a, b) {
+      return a < b ? -1 : a > b ? 1 : a >= b ? 0 : NaN;
+    }
+
+    function bisector(f) {
+      let delta = f;
+      let compare = f;
+
+      if (f.length === 1) {
+        delta = (d, x) => f(d) - x;
+        compare = ascendingComparator(f);
+      }
+
+      function left(a, x, lo, hi) {
+        if (lo == null) lo = 0;
+        if (hi == null) hi = a.length;
+        while (lo < hi) {
+          const mid = (lo + hi) >>> 1;
+          if (compare(a[mid], x) < 0) lo = mid + 1;
+          else hi = mid;
+        }
+        return lo;
+      }
+
+      function right(a, x, lo, hi) {
+        if (lo == null) lo = 0;
+        if (hi == null) hi = a.length;
+        while (lo < hi) {
+          const mid = (lo + hi) >>> 1;
+          if (compare(a[mid], x) > 0) hi = mid;
+          else lo = mid + 1;
+        }
+        return lo;
+      }
+
+      function center(a, x, lo, hi) {
+        if (lo == null) lo = 0;
+        if (hi == null) hi = a.length;
+        const i = left(a, x, lo, hi - 1);
+        return i > lo && delta(a[i - 1], x) > -delta(a[i], x) ? i - 1 : i;
+      }
+
+      return {left, center, right};
+    }
+
+    function ascendingComparator(f) {
+      return (d, x) => ascending$1(f(d), x);
+    }
+
+    // https://github.com/python/cpython/blob/a74eea238f5baba15797e2e8b570d153bc8690a7/Modules/mathmodule.c#L1423
+    class Adder {
+      constructor() {
+        this._partials = new Float64Array(32);
+        this._n = 0;
+      }
+      add(x) {
+        const p = this._partials;
+        let i = 0;
+        for (let j = 0; j < this._n && j < 32; j++) {
+          const y = p[j],
+            hi = x + y,
+            lo = Math.abs(x) < Math.abs(y) ? x - (hi - y) : y - (hi - x);
+          if (lo) p[i++] = lo;
+          x = hi;
+        }
+        p[i] = x;
+        this._n = i + 1;
+        return this;
+      }
+      valueOf() {
+        const p = this._partials;
+        let n = this._n, x, y, lo, hi = 0;
+        if (n > 0) {
+          hi = p[--n];
+          while (n > 0) {
+            x = hi;
+            y = p[--n];
+            hi = x + y;
+            lo = y - (hi - x);
+            if (lo) break;
+          }
+          if (n > 0 && ((lo < 0 && p[n - 1] < 0) || (lo > 0 && p[n - 1] > 0))) {
+            y = lo * 2;
+            x = hi + y;
+            if (y == x - hi) hi = x;
+          }
+        }
+        return hi;
+      }
+    }
+
+    var e10 = Math.sqrt(50),
+        e5 = Math.sqrt(10),
+        e2 = Math.sqrt(2);
+
+    function tickStep(start, stop, count) {
+      var step0 = Math.abs(stop - start) / Math.max(0, count),
+          step1 = Math.pow(10, Math.floor(Math.log(step0) / Math.LN10)),
+          error = step0 / step1;
+      if (error >= e10) step1 *= 10;
+      else if (error >= e5) step1 *= 5;
+      else if (error >= e2) step1 *= 2;
+      return stop < start ? -step1 : step1;
+    }
+
+    function* flatten(arrays) {
+      for (const array of arrays) {
+        yield* array;
+      }
+    }
+
+    function merge(arrays) {
+      return Array.from(flatten(arrays));
+    }
+
+    function range$1(start, stop, step) {
+      start = +start, stop = +stop, step = (n = arguments.length) < 2 ? (stop = start, start = 0, 1) : n < 3 ? 1 : +step;
+
+      var i = -1,
+          n = Math.max(0, Math.ceil((stop - start) / step)) | 0,
+          range = new Array(n);
+
+      while (++i < n) {
+        range[i] = start + i * step;
+      }
+
+      return range;
+    }
+
     var epsilon$1 = 1e-6;
     var epsilon2 = 1e-12;
     var pi$1 = Math.PI;
@@ -12081,12 +12438,12 @@ var app = (function () {
     }
 
     function graticuleX(y0, y1, dy) {
-      var y = range$2(y0, y1 - epsilon$1, dy).concat(y1);
+      var y = range$1(y0, y1 - epsilon$1, dy).concat(y1);
       return function(x) { return y.map(function(y) { return [x, y]; }); };
     }
 
     function graticuleY(x0, x1, dx) {
-      var x = range$2(x0, x1 - epsilon$1, dx).concat(x1);
+      var x = range$1(x0, x1 - epsilon$1, dx).concat(x1);
       return function(y) { return x.map(function(x) { return [x, y]; }); };
     }
 
@@ -12102,10 +12459,10 @@ var app = (function () {
       }
 
       function lines() {
-        return range$2(ceil(X0 / DX) * DX, X1, DX).map(X)
-            .concat(range$2(ceil(Y0 / DY) * DY, Y1, DY).map(Y))
-            .concat(range$2(ceil(x0 / dx) * dx, x1, dx).filter(function(x) { return abs$1(x % DX) > epsilon$1; }).map(x))
-            .concat(range$2(ceil(y0 / dy) * dy, y1, dy).filter(function(y) { return abs$1(y % DY) > epsilon$1; }).map(y));
+        return range$1(ceil(X0 / DX) * DX, X1, DX).map(X)
+            .concat(range$1(ceil(Y0 / DY) * DY, Y1, DY).map(Y))
+            .concat(range$1(ceil(x0 / dx) * dx, x1, dx).filter(function(x) { return abs$1(x % DX) > epsilon$1; }).map(x))
+            .concat(range$1(ceil(y0 / dy) * dy, y1, dy).filter(function(y) { return abs$1(y % DY) > epsilon$1; }).map(y));
       }
 
       graticule.lines = function() {
@@ -15469,7 +15826,7 @@ var app = (function () {
         start += (stop - start - step * (n - paddingInner)) * align;
         bandwidth = step * (1 - paddingInner);
         if (round) start = Math.round(start), bandwidth = Math.round(bandwidth);
-        var values = range$2(n).map(function(i) { return start + step * i; });
+        var values = range$3(n).map(function(i) { return start + step * i; });
         return ordinalRange(reverse ? values.reverse() : values);
       }
 
@@ -15674,7 +16031,7 @@ var app = (function () {
     }
 
     function tickFormat(start, stop, count, specifier) {
-      var step = tickStep(start, stop, count),
+      var step = tickStep$1(start, stop, count),
           precision;
       specifier = formatSpecifier(specifier == null ? ",f" : specifier);
       switch (specifier.type) {
@@ -15705,7 +16062,7 @@ var app = (function () {
 
       scale.ticks = function(count) {
         var d = domain();
-        return ticks(d[0], d[d.length - 1], count == null ? 10 : count);
+        return ticks$1(d[0], d[d.length - 1], count == null ? 10 : count);
       };
 
       scale.tickFormat = function(count, specifier) {
@@ -15731,7 +16088,7 @@ var app = (function () {
         }
         
         while (maxIter-- > 0) {
-          step = tickIncrement(start, stop, count);
+          step = tickIncrement$1(start, stop, count);
           if (step === prestep) {
             d[i0] = start;
             d[i1] = stop;
@@ -15906,9 +16263,9 @@ var app = (function () {
               z.push(t);
             }
           }
-          if (z.length * 2 < n) z = ticks(u, v, n);
+          if (z.length * 2 < n) z = ticks$1(u, v, n);
         } else {
-          z = ticks(i, j, Math.min(j - i, n)).map(pows);
+          z = ticks$1(i, j, Math.min(j - i, n)).map(pows);
         }
         return r ? z.reverse() : z;
       };
@@ -16113,7 +16470,7 @@ var app = (function () {
         if (!arguments.length) return domain.slice();
         domain = [];
         for (let d of _) if (d != null && !isNaN(d = +d)) domain.push(d);
-        domain.sort(ascending$3);
+        domain.sort(ascending$4);
         return rescale();
       };
 
@@ -17514,7 +17871,7 @@ var app = (function () {
         if (!arguments.length) return domain.slice();
         domain = [];
         for (let d of _) if (d != null && !isNaN(d = +d)) domain.push(d);
-        domain.sort(ascending$3);
+        domain.sort(ascending$4);
         return scale;
       };
 
@@ -20653,7 +21010,7 @@ var app = (function () {
 
     var d3 = /*#__PURE__*/Object.freeze({
         __proto__: null,
-        Adder: Adder,
+        Adder: Adder$1,
         Delaunay: Delaunay,
         FormatSpecifier: FormatSpecifier,
         InternMap: InternMap,
@@ -20666,7 +21023,7 @@ var app = (function () {
         arc: arc,
         area: area,
         areaRadial: areaRadial,
-        ascending: ascending$3,
+        ascending: ascending$4,
         autoType: autoType,
         axisBottom: axisBottom,
         axisLeft: axisLeft,
@@ -20677,10 +21034,10 @@ var app = (function () {
         bisectCenter: bisectCenter,
         bisectLeft: bisectLeft,
         bisectRight: bisectRight,
-        bisector: bisector,
+        bisector: bisector$1,
         blob: blob,
         blur: blur,
-        blur2: blur2,
+        blur2: blur2$1,
         blurImage: blurImage,
         brush: brush,
         brushSelection: brushSelection,
@@ -20694,7 +21051,7 @@ var app = (function () {
         color: color,
         contourDensity: density,
         contours: Contours,
-        count: count$1,
+        count: count$2,
         create: create$1,
         creator: creator,
         cross: cross$2,
@@ -20776,7 +21133,7 @@ var app = (function () {
         easeSinInOut: sinInOut,
         easeSinOut: sinOut,
         every: every,
-        extent: extent$1,
+        extent: extent$2,
         fcumsum: fcumsum,
         filter: filter$1,
         flatGroup: flatGroup,
@@ -20940,18 +21297,18 @@ var app = (function () {
         local: local$1,
         map: map$1,
         matcher: matcher,
-        max: max$3,
+        max: max$4,
         maxIndex: maxIndex,
         mean: mean,
         median: median,
         medianIndex: medianIndex,
-        merge: merge,
+        merge: merge$1,
         min: min$2,
         minIndex: minIndex,
         mode: mode,
         namespace: namespace,
         namespaces: namespaces,
-        nice: nice$1,
+        nice: nice$2,
         now: now,
         pack: index$1,
         packEnclose: enclose,
@@ -21000,7 +21357,7 @@ var app = (function () {
         randomPoisson: poisson,
         randomUniform: uniform,
         randomWeibull: weibull,
-        range: range$2,
+        range: range$3,
         rank: rank,
         reduce: reduce,
         reverse: reverse$1,
@@ -21122,11 +21479,11 @@ var app = (function () {
         text: text,
         thresholdFreedmanDiaconis: thresholdFreedmanDiaconis,
         thresholdScott: thresholdScott,
-        thresholdSturges: thresholdSturges,
+        thresholdSturges: thresholdSturges$1,
         tickFormat: tickFormat,
-        tickIncrement: tickIncrement,
-        tickStep: tickStep,
-        ticks: ticks,
+        tickIncrement: tickIncrement$1,
+        tickStep: tickStep$1,
+        ticks: ticks$1,
         timeDay: timeDay,
         timeDays: timeDays,
         get timeFormat () { return timeFormat; },
@@ -21243,7 +21600,7 @@ var app = (function () {
     	return child_ctx;
     }
 
-    // (48:6) {#each arc_data as data, index}
+    // (60:6) {#each arc_data as data, index}
     function create_each_block$1(ctx) {
     	let path;
     	let path_d_value;
@@ -21252,23 +21609,23 @@ var app = (function () {
     	let dispose;
 
     	function mouseover_handler(...args) {
-    		return /*mouseover_handler*/ ctx[5](/*index*/ ctx[11], ...args);
+    		return /*mouseover_handler*/ ctx[6](/*index*/ ctx[11], ...args);
     	}
 
     	const block = {
     		c: function create() {
     			path = svg_element("path");
 
-    			attr_dev(path, "d", path_d_value = /*arcGenerator*/ ctx[3]({
+    			attr_dev(path, "d", path_d_value = /*arcGenerator*/ ctx[4]({
     				startAngle: /*data*/ ctx[9].startAngle,
     				endAngle: /*data*/ ctx[9].endAngle
     			}));
 
     			attr_dev(path, "fill", path_fill_value = /*index*/ ctx[11] === /*hovered*/ ctx[1]
     			? "brown"
-    			: /*arc_color*/ ctx[4](/*data*/ ctx[9].data[1]));
+    			: /*arc_color*/ ctx[5](/*data*/ ctx[9].data[0]));
 
-    			add_location(path, file$3, 48, 8, 1034);
+    			add_location(path, file$3, 60, 8, 1767);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, path, anchor);
@@ -21276,7 +21633,7 @@ var app = (function () {
     			if (!mounted) {
     				dispose = [
     					listen_dev(path, "mouseover", mouseover_handler, false, false, false, false),
-    					listen_dev(path, "mouseout", /*mouseout_handler*/ ctx[6], false, false, false, false)
+    					listen_dev(path, "mouseout", /*mouseout_handler*/ ctx[7], false, false, false, false)
     				];
 
     				mounted = true;
@@ -21285,7 +21642,7 @@ var app = (function () {
     		p: function update(new_ctx, dirty) {
     			ctx = new_ctx;
 
-    			if (dirty & /*arc_data*/ 1 && path_d_value !== (path_d_value = /*arcGenerator*/ ctx[3]({
+    			if (dirty & /*arc_data*/ 1 && path_d_value !== (path_d_value = /*arcGenerator*/ ctx[4]({
     				startAngle: /*data*/ ctx[9].startAngle,
     				endAngle: /*data*/ ctx[9].endAngle
     			}))) {
@@ -21294,7 +21651,7 @@ var app = (function () {
 
     			if (dirty & /*hovered, arc_data*/ 3 && path_fill_value !== (path_fill_value = /*index*/ ctx[11] === /*hovered*/ ctx[1]
     			? "brown"
-    			: /*arc_color*/ ctx[4](/*data*/ ctx[9].data[1]))) {
+    			: /*arc_color*/ ctx[5](/*data*/ ctx[9].data[0]))) {
     				attr_dev(path, "fill", path_fill_value);
     			}
     		},
@@ -21309,64 +21666,40 @@ var app = (function () {
     		block,
     		id: create_each_block$1.name,
     		type: "each",
-    		source: "(48:6) {#each arc_data as data, index}",
+    		source: "(60:6) {#each arc_data as data, index}",
     		ctx
     	});
 
     	return block;
     }
 
-    // (74:4) {#if hovered !== -1}
+    // (86:4) {#if hovered !== -1}
     function create_if_block$1(ctx) {
     	let t0_value = /*arc_data*/ ctx[0][/*hovered*/ ctx[1]].data[0] + "";
     	let t0;
     	let t1;
-    	let if_block_anchor;
-
-    	function select_block_type(ctx, dirty) {
-    		if (/*arc_data*/ ctx[0][/*hovered*/ ctx[1]].index === 0) return create_if_block_1$1;
-    		if (/*arc_data*/ ctx[0][/*hovered*/ ctx[1]].index === 1) return create_if_block_2;
-    		if (/*arc_data*/ ctx[0][/*hovered*/ ctx[1]].index === 2) return create_if_block_3;
-    	}
-
-    	let current_block_type = select_block_type(ctx);
-    	let if_block = current_block_type && current_block_type(ctx);
+    	let t2_value = /*migration_medium_data*/ ctx[3][/*arc_data*/ ctx[0][/*hovered*/ ctx[1]].index].name + "";
+    	let t2;
 
     	const block = {
     		c: function create() {
     			t0 = text$1(t0_value);
     			t1 = text$1("% of people migrated\n      ");
-    			if (if_block) if_block.c();
-    			if_block_anchor = empty$3();
+    			t2 = text$1(t2_value);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, t0, anchor);
     			insert_dev(target, t1, anchor);
-    			if (if_block) if_block.m(target, anchor);
-    			insert_dev(target, if_block_anchor, anchor);
+    			insert_dev(target, t2, anchor);
     		},
     		p: function update(ctx, dirty) {
     			if (dirty & /*arc_data, hovered*/ 3 && t0_value !== (t0_value = /*arc_data*/ ctx[0][/*hovered*/ ctx[1]].data[0] + "")) set_data_dev(t0, t0_value);
-
-    			if (current_block_type !== (current_block_type = select_block_type(ctx))) {
-    				if (if_block) if_block.d(1);
-    				if_block = current_block_type && current_block_type(ctx);
-
-    				if (if_block) {
-    					if_block.c();
-    					if_block.m(if_block_anchor.parentNode, if_block_anchor);
-    				}
-    			}
+    			if (dirty & /*arc_data, hovered*/ 3 && t2_value !== (t2_value = /*migration_medium_data*/ ctx[3][/*arc_data*/ ctx[0][/*hovered*/ ctx[1]].index].name + "")) set_data_dev(t2, t2_value);
     		},
     		d: function destroy(detaching) {
     			if (detaching) detach_dev(t0);
     			if (detaching) detach_dev(t1);
-
-    			if (if_block) {
-    				if_block.d(detaching);
-    			}
-
-    			if (detaching) detach_dev(if_block_anchor);
+    			if (detaching) detach_dev(t2);
     		}
     	};
 
@@ -21374,88 +21707,7 @@ var app = (function () {
     		block,
     		id: create_if_block$1.name,
     		type: "if",
-    		source: "(74:4) {#if hovered !== -1}",
-    		ctx
-    	});
-
-    	return block;
-    }
-
-    // (80:46) 
-    function create_if_block_3(ctx) {
-    	let t;
-
-    	const block = {
-    		c: function create() {
-    			t = text$1("illegally with a coyote");
-    		},
-    		m: function mount(target, anchor) {
-    			insert_dev(target, t, anchor);
-    		},
-    		d: function destroy(detaching) {
-    			if (detaching) detach_dev(t);
-    		}
-    	};
-
-    	dispatch_dev("SvelteRegisterBlock", {
-    		block,
-    		id: create_if_block_3.name,
-    		type: "if",
-    		source: "(80:46) ",
-    		ctx
-    	});
-
-    	return block;
-    }
-
-    // (78:46) 
-    function create_if_block_2(ctx) {
-    	let t;
-
-    	const block = {
-    		c: function create() {
-    			t = text$1("illegally independently");
-    		},
-    		m: function mount(target, anchor) {
-    			insert_dev(target, t, anchor);
-    		},
-    		d: function destroy(detaching) {
-    			if (detaching) detach_dev(t);
-    		}
-    	};
-
-    	dispatch_dev("SvelteRegisterBlock", {
-    		block,
-    		id: create_if_block_2.name,
-    		type: "if",
-    		source: "(78:46) ",
-    		ctx
-    	});
-
-    	return block;
-    }
-
-    // (76:6) {#if arc_data[hovered].index === 0}
-    function create_if_block_1$1(ctx) {
-    	let t;
-
-    	const block = {
-    		c: function create() {
-    			t = text$1("legally");
-    		},
-    		m: function mount(target, anchor) {
-    			insert_dev(target, t, anchor);
-    		},
-    		d: function destroy(detaching) {
-    			if (detaching) detach_dev(t);
-    		}
-    	};
-
-    	dispatch_dev("SvelteRegisterBlock", {
-    		block,
-    		id: create_if_block_1$1.name,
-    		type: "if",
-    		source: "(76:6) {#if arc_data[hovered].index === 0}",
+    		source: "(86:4) {#if hovered !== -1}",
     		ctx
     	});
 
@@ -21463,10 +21715,12 @@ var app = (function () {
     }
 
     function create_fragment$3(ctx) {
+    	let h2;
+    	let t1;
     	let div1;
     	let svg;
     	let g;
-    	let t;
+    	let t2;
     	let div0;
     	let div0_class_value;
     	let each_value = /*arc_data*/ ctx[0];
@@ -21481,6 +21735,9 @@ var app = (function () {
 
     	const block = {
     		c: function create() {
+    			h2 = element("h2");
+    			h2.textContent = "Legal vs. Illegal Migration";
+    			t1 = space();
     			div1 = element("div");
     			svg = svg_element("svg");
     			g = svg_element("g");
@@ -21489,14 +21746,16 @@ var app = (function () {
     				each_blocks[i].c();
     			}
 
-    			t = space();
+    			t2 = space();
     			div0 = element("div");
     			if (if_block) if_block.c();
+    			set_style(h2, "margin-top", "15px");
+    			add_location(h2, file$3, 55, 0, 1558);
     			attr_dev(g, "transform", "translate(250, 120)");
-    			add_location(g, file$3, 46, 4, 952);
+    			add_location(g, file$3, 58, 4, 1685);
     			attr_dev(svg, "width", "500");
     			attr_dev(svg, "height", "500");
-    			add_location(svg, file$3, 45, 2, 917);
+    			add_location(svg, file$3, 57, 2, 1650);
 
     			attr_dev(div0, "class", div0_class_value = "" + (null_to_empty(/*hovered*/ ctx[1] === -1
     			? "tooltip-hidden"
@@ -21504,14 +21763,16 @@ var app = (function () {
 
     			set_style(div0, "left", /*recorded_mouse_position*/ ctx[2].x + 40 + "px");
     			set_style(div0, "top", /*recorded_mouse_position*/ ctx[2].y + 40 + "px");
-    			add_location(div0, file$3, 68, 2, 1545);
+    			add_location(div0, file$3, 80, 2, 2278);
     			attr_dev(div1, "class", "visualization svelte-1rt2g3s");
-    			add_location(div1, file$3, 44, 0, 887);
+    			add_location(div1, file$3, 56, 0, 1620);
     		},
     		l: function claim(nodes) {
     			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
     		},
     		m: function mount(target, anchor) {
+    			insert_dev(target, h2, anchor);
+    			insert_dev(target, t1, anchor);
     			insert_dev(target, div1, anchor);
     			append_dev(div1, svg);
     			append_dev(svg, g);
@@ -21522,12 +21783,12 @@ var app = (function () {
     				}
     			}
 
-    			append_dev(div1, t);
+    			append_dev(div1, t2);
     			append_dev(div1, div0);
     			if (if_block) if_block.m(div0, null);
     		},
     		p: function update(ctx, [dirty]) {
-    			if (dirty & /*arcGenerator, arc_data, hovered, arc_color, recorded_mouse_position*/ 31) {
+    			if (dirty & /*arcGenerator, arc_data, hovered, arc_color, recorded_mouse_position*/ 55) {
     				each_value = /*arc_data*/ ctx[0];
     				validate_each_argument(each_value);
     				let i;
@@ -21581,6 +21842,8 @@ var app = (function () {
     		i: noop$4,
     		o: noop$4,
     		d: function destroy(detaching) {
+    			if (detaching) detach_dev(h2);
+    			if (detaching) detach_dev(t1);
     			if (detaching) detach_dev(div1);
     			destroy_each(each_blocks, detaching);
     			if (if_block) if_block.d();
@@ -21602,16 +21865,60 @@ var app = (function () {
     	let { $$slots: slots = {}, $$scope } = $$props;
     	validate_slots('Pie', slots, []);
 
-    	let todo_record = [
-    		{ index: 0, size: 20.4, names: "idk" },
-    		{ index: 1, size: 23.8, names: "idk" },
-    		{ index: 2, size: 55.8, names: "idk" }
+    	let migration_medium_data = [
+    		{
+    			index: 0,
+    			size: 893,
+    			name: "Illegally with Coyote"
+    		},
+    		{
+    			index: 1,
+    			size: 338,
+    			name: "Illegally Independently"
+    		},
+    		{
+    			index: 2,
+    			size: 115,
+    			name: "National Identity Document"
+    		},
+    		{ index: 3, size: 95, name: "Tourist Visa" },
+    		{
+    			index: 4,
+    			size: 47,
+    			name: "Passport, No Visa Required"
+    		},
+    		{ index: 5, size: 45, name: "Other" },
+    		{
+    			index: 6,
+    			size: 38,
+    			name: "Illegally via Caravans"
+    		},
+    		{
+    			index: 7,
+    			size: 32,
+    			name: "Foreign Residence"
+    		},
+    		{ index: 8, size: 29, name: "Work Visa" },
+    		{
+    			index: 9,
+    			size: 9,
+    			name: "Papers from Mexico"
+    		},
+    		{ index: 10, size: 7, name: "Student Visa" },
+    		{
+    			index: 11,
+    			size: 4,
+    			name: "Refuge/Asylum"
+    		}
     	];
 
     	let arcGenerator = arc().innerRadius(10).outerRadius(100).padAngle(0.02).cornerRadius(4);
     	let pieAngleGenerator = pie().value(d => d[0]);
     	let arc_data = [];
-    	const arc_color = linear().range(["#faffd1", "#db921d", "#b86a04", "#a65d29", "#6e3003"]).domain([0, 3, 6, 9, 12]);
+
+    	// let names = ["Tourist Visa", "Work Visa", "Student Visa"];
+    	const arc_color = linear().range(["#faffd1", "#db921d", "#b86a04", "#a65d29", "#6e3003"]).domain([0, 15, 30, 45, 60]);
+
     	let hovered = -1;
     	let recorded_mouse_position = { x: 0, y: 0 };
     	const writable_props = [];
@@ -21631,7 +21938,7 @@ var app = (function () {
 
     	$$self.$capture_state = () => ({
     		d3,
-    		todo_record,
+    		migration_medium_data,
     		arcGenerator,
     		pieAngleGenerator,
     		arc_data,
@@ -21641,8 +21948,8 @@ var app = (function () {
     	});
 
     	$$self.$inject_state = $$props => {
-    		if ('todo_record' in $$props) $$invalidate(7, todo_record = $$props.todo_record);
-    		if ('arcGenerator' in $$props) $$invalidate(3, arcGenerator = $$props.arcGenerator);
+    		if ('migration_medium_data' in $$props) $$invalidate(3, migration_medium_data = $$props.migration_medium_data);
+    		if ('arcGenerator' in $$props) $$invalidate(4, arcGenerator = $$props.arcGenerator);
     		if ('pieAngleGenerator' in $$props) $$invalidate(8, pieAngleGenerator = $$props.pieAngleGenerator);
     		if ('arc_data' in $$props) $$invalidate(0, arc_data = $$props.arc_data);
     		if ('hovered' in $$props) $$invalidate(1, hovered = $$props.hovered);
@@ -21657,9 +21964,9 @@ var app = (function () {
     		if ($$self.$$.dirty & /*arc_data*/ 1) {
     			{
     				// interactive data here
-    				let todo_count_by_size = rollups(todo_record, v => v.length, d => d.size);
+    				let migration_medium_counts = rollups(migration_medium_data, v => v.length, d => d.size);
 
-    				$$invalidate(0, arc_data = pieAngleGenerator(todo_count_by_size));
+    				$$invalidate(0, arc_data = pieAngleGenerator(migration_medium_counts));
     				console.log(arc_data);
     			}
     		}
@@ -21669,6 +21976,7 @@ var app = (function () {
     		arc_data,
     		hovered,
     		recorded_mouse_position,
+    		migration_medium_data,
     		arcGenerator,
     		arc_color,
     		mouseover_handler,
