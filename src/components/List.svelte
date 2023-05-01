@@ -4,6 +4,7 @@
   import { geoData } from "./const.js";
   import { activeListItem, activeMapItem } from "./states.js";
   import Pie from "./Pie.svelte";
+  import Pie2 from "./Pie2.svelte";
   import Sankey from "./Sankey/Sankey.svelte";
   import BarChart from "./BarChart.svelte";
 
@@ -37,12 +38,7 @@
 <div id="list-items" bind:this={list}>
   <div class="head">
     <h1>The Migration Journey</h1>
-    <p>
-      Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod
-      tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim
-      veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea
-      commodo consequat.
-    </p>
+    <p />
   </div>
   <div class="separator" />
   {#each geoData as item, index}
@@ -53,7 +49,11 @@
       {#if item.name === "Honduras"}
         <Pie />
       {:else if item.name === "Guatemala"}
+        <Pie2 />
+      {:else if item.name === "Mexico"}
         <Pie />
+      {:else if item.name === "Texas"}
+        <Pie2 />
       {:else if item.name === "California"}
         <Sankey />
       {/if}

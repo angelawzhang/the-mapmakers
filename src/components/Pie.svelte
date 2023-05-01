@@ -3,18 +3,18 @@
   // our interactive data
   // export let migration_medium_data = [];
   let migration_medium_data = [
-    { index: 0, size: 893, name: "Illegally with Coyote" },
-    { index: 1, size: 338, name: "Illegally Independently" },
-    { index: 2, size: 115, name: "National Identity Document" },
-    { index: 3, size: 95, name: "Tourist Visa" },
-    { index: 4, size: 47, name: "Passport, No Visa Required" },
-    { index: 5, size: 45, name: "Other" },
-    { index: 6, size: 38, name: "Illegally via Caravans" },
-    { index: 7, size: 32, name: "Foreign Residence" },
-    { index: 8, size: 29, name: "Work Visa" },
-    { index: 9, size: 9, name: "Papers from Mexico" },
-    { index: 10, size: 7, name: "Student Visa" },
-    { index: 11, size: 4, name: "Refuge/Asylum" },
+    { index: 0, size: 54.1, name: "Illegally with Coyote" },
+    { index: 1, size: 20.5, name: "Illegally Independently" },
+    { index: 2, size: 7.0, name: "National Identity Document" },
+    { index: 3, size: 5.8, name: "Tourist Visa" },
+    { index: 4, size: 2.8, name: "Passport, No Visa Required" },
+    { index: 5, size: 2.7, name: "Other" },
+    { index: 6, size: 2.3, name: "Illegally via Caravans" },
+    { index: 7, size: 1.9, name: "Foreign Residence" },
+    { index: 8, size: 1.8, name: "Work Visa" },
+    { index: 9, size: 0.5, name: "Papers from Mexico" },
+    { index: 10, size: 0.4, name: "Student Visa" },
+    { index: 11, size: 0.2, name: "Refuge/Asylum" },
   ];
 
   let arcGenerator = d3
@@ -28,9 +28,22 @@
   let arc_data = [];
 
   const arc_color = d3
-    .scaleLinear()
-    .range(["#faffd1", "#db921d", "#b86a04", "#a65d29", "#6e3003"])
-    .domain([0, 11]);
+    .scaleOrdinal()
+    .range([
+      "#01CA97",
+      "#E8B0D1",
+      "#208a9a",
+      "#27aab5",
+      "#2ec9d0",
+      "#31d8dd",
+      "#f69ad2",
+      "#4ee1e5",
+      "#5de4e8",
+      "#9beff2",
+      "#abf1f4",
+      "#cef7fa",
+    ])
+    .domain([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
 
   let hovered = -1;
 
@@ -62,7 +75,7 @@
             startAngle: data.startAngle,
             endAngle: data.endAngle,
           })}
-          fill={index === hovered ? "brown" : arc_color(index)}
+          fill={index === hovered ? "#ECDC8F" : arc_color(index)}
           on:mouseover={(event) => {
             hovered = index;
             recorded_mouse_position = {
@@ -83,7 +96,7 @@
       40}px; top: {recorded_mouse_position.y + 40}px"
   >
     {#if hovered !== -1}
-      {arc_data[hovered].data[0]}% of people migrated
+      {arc_data[hovered].data[0]}% of people migrated via
       {migration_medium_data[arc_data[hovered].index].name}
     {/if}
   </div>
@@ -100,16 +113,16 @@
   /* dynamic classes for the tooltip */
   .tooltip-hidden {
     visibility: hidden;
-    font-family: "Nunito", sans-serif;
+    font-family: "Lato", sans-serif;
     width: 200px;
     position: absolute;
   }
 
   .tooltip-visible {
-    font: 25px sans-serif;
-    font-family: "Nunito", sans-serif;
+    font: 16px sans-serif;
+    font-family: "Lato", sans-serif;
     visibility: visible;
-    background-color: #f0dba8;
+    background-color: #e6c39c;
     border-radius: 10px;
     width: 200px;
     color: black;

@@ -195,7 +195,6 @@
   </div>
 
   <div class="measure" bind:offsetWidth={width} bind:offsetHeight={height} />
-  <h2>Below the diagram</h2>
 </div>
 
 <style>

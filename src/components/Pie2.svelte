@@ -11,18 +11,18 @@
 
   let arcGenerator = d3
     .arc()
-    .innerRadius(10)
+    .innerRadius(0)
     .outerRadius(100)
-    .padAngle(0.02)
-    .cornerRadius(4);
+    .padAngle(0)
+    .cornerRadius(0);
 
   let pieAngleGenerator = d3.pie().value((d) => d[0]);
   let arc_data = [];
 
   const arc_color = d3
-    .scaleLinear()
-    .range(["#faffd1", "#db921d", "#b86a04", "#a65d29", "#6e3003"])
-    .domain([0, 15, 30, 45, 60]);
+    .scaleOrdinal()
+    .range(["#67923D", "#ECDC8F", "#B22234", "#F4AD6A"])
+    .domain([0, 1, 2, 3]);
 
   let hovered = -1;
 
@@ -44,7 +44,7 @@
   }
 </script>
 
-<h2 style="margin-top: 15px">Legal vs. Illegal Migration</h2>
+<h2 style="margin-top: 15px">Migration Succeeded or Failed?</h2>
 <div class="visualization">
   <svg width="500" height="500">
     <g transform="translate(250, 120)">
@@ -54,7 +54,7 @@
             startAngle: data.startAngle,
             endAngle: data.endAngle,
           })}
-          fill={index === hovered ? "brown" : arc_color(data.data[0])}
+          fill={index === hovered ? "#3C3B6E" : arc_color(data.data[0])}
           on:mouseover={(event) => {
             hovered = index;
             recorded_mouse_position = {
@@ -75,7 +75,7 @@
       40}px; top: {recorded_mouse_position.y + 40}px"
   >
     {#if hovered !== -1}
-      {arc_data[hovered].data[0]} people responded: 
+      {arc_data[hovered].data[0]} people responded:
       {migration_medium_data[arc_data[hovered].index].name}
     {/if}
   </div>
