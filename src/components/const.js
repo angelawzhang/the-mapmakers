@@ -23,7 +23,7 @@ export const geoData = [
     },
     {
         name: 'California',
-        description: 'Now inside of the United States, she was almost at her final destination. She took a van from Texas to California to Sacramento, where her father had migrated previously. However, her life wouldn\'t get easy so soon. For a few years, she worked 18 hours a day to pay off her debt. But fast forward to present day, and she\'s thriving as she pursues higher education.',
+        description: 'Now inside of the United States, she was almost at her final destination. She took a van from Texas to California to Sacramento, where her father had migrated previously. However, her life wouldn\'t get easy so soon. For a few years, she worked 18 hours a day to pay off her debt. But fast forward to present day, and she\'s thriving as she gives back to struggling youth after obtaining a college degree.',
         coordinates: [-121.49502179257237, 38.58978634596377]
     }
 ];

@@ -211,7 +211,7 @@ svg {
 }
 
 .x-axis .tick text {
-  padding: 15px;
+  padding: 30px;
   text-anchor: middle;
   /* margin-top: -10px; */
   /* transform: rotate(-30deg); */

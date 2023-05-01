@@ -4,8 +4,8 @@
   import * as d3 from "d3";
 
   let points = [
-    { id: 1, reason: "Without Coyote", numOfHouseholds: 7.5 },
-    { id: 2, reason: "With Coyote", numOfHouseholds: 3.1 },
+    { id: 1, reason: "Without a Coyote", numOfHouseholds: 7.5 },
+    { id: 2, reason: "With a Coyote", numOfHouseholds: 3.1 },
   ];
 
   $: reasons = points.map((d) => d.reason);
@@ -117,6 +117,7 @@
               x: event.pageX,
               y: event.pageY,
             };
+            console.log(recorded_mouse_position);
           }}
           on:mouseout={(event) => {
             hovered = -1;
@@ -128,19 +129,19 @@
 
   <div
     class={hovered === -1 ? "tooltip-hidden" : "tooltip-visible"}
-    style="left: {recorded_mouse_position.x +
-      40}px; top: {recorded_mouse_position.y + 40}px"
+    style="left: {recorded_mouse_position.x -
+      650}px; top: {recorded_mouse_position.y - 700}px"
   >
     {#if hovered !== -1}
       <p>
-        {points[hovered].numOfHouseholds} households main reason of migration was:
-        {points[hovered].reason}
+        {points[hovered].numOfHouseholds}% of travelers
+        {points[hovered].reason.toLowerCase()} experienced violence.
       </p>
     {/if}
   </div>
 </div>
 <div>
-  <p>
+  <p class="center-text">
     11.5% of deported Mexican migrants are abandoned by the coyotes they hired,
     and coyotes are the perpetrators of robbery or assault of migrants 9.1% of
     the time!
