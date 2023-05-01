@@ -4,11 +4,11 @@
   import * as d3 from "d3";
 
   let points = [
-    { id: 1, reason: "Search for better job", numOfHouseholds: 1239 },
+    { id: 1, reason: "Better job", numOfHouseholds: 1239 },
     { id: 2, reason: "Unemployment", numOfHouseholds: 618 },
     { id: 3, reason: "Money for other", numOfHouseholds: 351 },
     { id: 4, reason: "Remittances", numOfHouseholds: 277 },
-    { id: 5, reason: "Money to buy food", numOfHouseholds: 234 },
+    { id: 5, reason: "Money for food", numOfHouseholds: 234 },
     { id: 6, reason: "Fam reunification", numOfHouseholds: 137 },
     { id: 7, reason: "Unsafety", numOfHouseholds: 118 },
     { id: 8, reason: "For Study", numOfHouseholds: 80 },
@@ -82,7 +82,7 @@
 </div>
 
 <div class="chart" bind:clientWidth={width} bind:clientHeight={height}>
-  <svg>
+  <svg class="bar">
     <!-- y axis -->
     <g class="axis y-axis" transform="translate(0,{padding.top})">
       {#each yTicks as tick}
@@ -109,7 +109,7 @@
     </g>
 
     <g class="bars">
-      {#each points as point, i (point.reason)}
+      {#each points as point, i}
         <rect
           x={xScale(point.reason)}
           y={yScale(point.numOfHouseholds)}
@@ -118,6 +118,7 @@
           out:slide={{ duration: 1000 }}
           on:mouseover={(event) => {
             hovered = i;
+            console.log(hovered);
             recorded_mouse_position = {
               x: event.pageX,
               y: event.pageY,
@@ -140,7 +141,7 @@
   <div
     class={hovered === -1 ? "tooltip-hidden" : "tooltip-visible"}
     style="left: {recorded_mouse_position.x -
-      100}px; top: {recorded_mouse_position.y - 100}px"
+      1000}px; top: {recorded_mouse_position.y - 400}px"
   >
     {#if hovered !== -1}
       <p>
@@ -152,75 +153,15 @@
 </div>
 <div>
   {#if showAll == false}
-    <p>the top 5 reasons of migration are financial!</p>
+    <p class="center-text">The top 5 reasons of migration are financial!</p>
   {/if}
 </div>
 
 <style>
-  h2 {
-    text-align: center;
-  }
-
-  .chart {
-    width: 80%;
-    /* max-width: 500px; */
-    margin: 0 auto;
-  }
-
-  svg {
-    position: relative;
-    width: 100%;
-    height: 200px;
-  }
-
-  .tick {
-    font-family: Helvetica, Arial;
-    font-size: 0.725em;
-    font-weight: 200;
-  }
-
-  .tick line {
-    stroke: #e2e2e2;
-    stroke-dasharray: 2;
-  }
-
-  .tick text {
-    fill: #ccc;
-    text-anchor: start;
-  }
-
-  .tick.tick-0 line {
-    stroke-dasharray: 0;
-  }
-
-  .x-axis .tick text {
-    text-anchor: middle;
-  }
-
   .bars rect {
     transition: all 1s;
     fill: #a11;
     stroke: none;
     opacity: 0.65;
-  }
-
-  /* dynamic classes for the tooltip */
-  .tooltip-hidden {
-    visibility: hidden;
-    font-family: "Nunito", sans-serif;
-    width: 200px;
-    position: absolute;
-  }
-
-  .tooltip-visible {
-    font: 25px sans-serif;
-    font-family: "Nunito", sans-serif;
-    visibility: visible;
-    background-color: #f0dba8;
-    border-radius: 10px;
-    width: 200px;
-    color: black;
-    position: absolute;
-    padding: 10px;
   }
 </style>

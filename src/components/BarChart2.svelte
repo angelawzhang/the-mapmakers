@@ -4,13 +4,13 @@
   import * as d3 from "d3";
 
   let points = [
-    { id: 1, reason: "Search for better job", numOfHouseholds: 1239 },
-    { id: 2, reason: "Unemployment", numOfHouseholds: 618 },
+    { id: 1, reason: "Without Coyote", numOfHouseholds: 7.5 },
+    { id: 2, reason: "With Coyote", numOfHouseholds: 3.1 },
   ];
 
   $: reasons = points.map((d) => d.reason);
 
-  const yTicks = [0, 400, 700, 1000, 1300];
+  const yTicks = [0, 2, 4, 6, 8];
   const padding = { top: 20, right: 15, bottom: 20, left: 25 };
 
   let width = 500;

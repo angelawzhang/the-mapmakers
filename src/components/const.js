@@ -18,12 +18,12 @@ export const geoData = [
     },
     {
         name: 'Texas',
-        description: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.',
+        description: 'For the next part of the journey, she walked. She walked for 7 hours through a scorching desert, briefly finding shelter in a ranch house. The walking seemed to be endless—she walked for three days straight. Some people even died. Finally, after an exhausting journey, they made it across the border.',
         coordinates: [-98.97333902989601, 31.313912784675594]
     },
     {
         name: 'California',
-        description: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.',
+        description: 'Now inside of the United States, she was almost at her final destination. She took a van from Texas to California to Sacramento, where her father had migrated previously. However, her life wouldn\'t get easy so soon. For a few years, she worked 18 hours a day to pay off her debt. But fast forward to present day, and she\'s thriving as she pursues higher education.',
         coordinates: [-121.49502179257237, 38.58978634596377]
     }
 ];

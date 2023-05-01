@@ -7,6 +7,7 @@
   import Pie2 from "./Pie2.svelte";
   import Sankey from "./Sankey/Sankey.svelte";
   import BarChart from "./BarChart.svelte";
+  import BarChart2 from "./BarChart2.svelte";
 
   let list;
   onMount(async () => {
@@ -47,9 +48,9 @@
       <p>{item.description}</p>
       <!-- Add Svelte components for each section here; add additional ifs accordingly -->
       {#if item.name === "Honduras"}
-        <Pie />
+        <BarChart />
       {:else if item.name === "Guatemala"}
-        <Pie2 />
+        <BarChart2 />
       {:else if item.name === "Mexico"}
         <Pie />
       {:else if item.name === "Texas"}
