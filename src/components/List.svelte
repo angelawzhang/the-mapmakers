@@ -4,6 +4,8 @@
   import { geoData } from "./const.js";
   import { activeListItem, activeMapItem } from "./states.js";
   import Pie from "./Pie.svelte";
+  import Sankey from "./Sankey/Sankey.svelte";
+  import BarChart from "./BarChart.svelte";
 
   let list;
   onMount(async () => {
@@ -34,7 +36,7 @@
 
 <div id="list-items" bind:this={list}>
   <div class="head">
-    <h1>a very cool title!!!!!</h1>
+    <h1>The Migration Journey</h1>
     <p>
       Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod
       tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim
@@ -52,6 +54,8 @@
         <Pie />
       {:else if item.name === "Guatemala"}
         <Pie />
+      {:else if item.name === "California"}
+        <Sankey />
       {/if}
     </div>
   {/each}

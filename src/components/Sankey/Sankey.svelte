@@ -55,7 +55,7 @@
     "#4997D0",
     "#67923D",
   ];
-  console.log(colors);
+  // console.log(colors);
 
   let nodes, links;
   $: {
@@ -94,10 +94,11 @@
 
   <div class="measure" bind:offsetWidth={width} bind:offsetHeight={height} />
 
-  <svg
+  <!-- <svg
     width={width + margin.left + margin.right}
     height={height + margin.top + margin.bottom}
-  >
+  > -->
+  <svg width="500" height="500">
     <g>
       <g>
         {#each links as link, i (`link-${i}`)}
@@ -122,6 +123,8 @@
               highlightLinkIndexes = [i];
               linkHovered = -1;
             }}
+            on:focus={(e) => {}}
+            on:blur={(e) => {}}
           />
         {/each}
       </g>
@@ -151,6 +154,8 @@
               highlightLinkIndexes = [];
               nodeHovered = -1;
             }}
+            on:focus={(e) => {}}
+            on:blur={(e) => {}}
           />
 
           <text
@@ -190,12 +195,13 @@
   </div>
 
   <div class="measure" bind:offsetWidth={width} bind:offsetHeight={height} />
+  <h2>Below the diagram</h2>
 </div>
 
 <style>
   .graph {
     position: relative;
-    width: 100%;
+    /* width: 100%; */
     height: 100%;
     margin: 0 auto;
   }
@@ -203,7 +209,7 @@
     position: absolute;
     top: 0;
     left: 0;
-    width: 70%;
+    /* width: 70%; */
     height: 90%;
     pointer-events: none;
     /* background: rgba(255, 0, 0, 0.5); */

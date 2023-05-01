@@ -19,19 +19,18 @@
 
   let arcGenerator = d3
     .arc()
-    .innerRadius(10)
+    .innerRadius(0)
     .outerRadius(100)
-    .padAngle(0.02)
-    .cornerRadius(4);
+    .padAngle(0)
+    .cornerRadius(0);
 
   let pieAngleGenerator = d3.pie().value((d) => d[0]);
   let arc_data = [];
-  // let names = ["Tourist Visa", "Work Visa", "Student Visa"];
 
   const arc_color = d3
     .scaleLinear()
     .range(["#faffd1", "#db921d", "#b86a04", "#a65d29", "#6e3003"])
-    .domain([0, 15, 30, 45, 60]);
+    .domain([0, 11]);
 
   let hovered = -1;
 
@@ -63,7 +62,7 @@
             startAngle: data.startAngle,
             endAngle: data.endAngle,
           })}
-          fill={index === hovered ? "brown" : arc_color(data.data[0])}
+          fill={index === hovered ? "brown" : arc_color(index)}
           on:mouseover={(event) => {
             hovered = index;
             recorded_mouse_position = {

@@ -3,6 +3,7 @@
 .container {
     height: 100vh;
     display: flex;
+    width: 100vw;
 }
 
 .pane {
@@ -20,12 +21,13 @@
     align-items: center;
     justify-content: center;
     width: 50%;
+    overflow:scroll;
 }
 
 /* List */
 
 p {
-    font-family: Georgia, serif;
+  font-family: 'Lato', sans-serif;
 }
 
 /* Map */
@@ -69,22 +71,29 @@ body {
 
  #list-items {
     display: flex;
-    flex-wrap: wrap;
+    flex-direction: column;
     overflow: scroll;
     scroll-snap-type: y proximity;
   }
 
   .list-item {
-    font-size: 1.2em;
+    /* font-size: 1.2em;
     line-height: 1.5em;
+    scroll-snap-align: start; */
     padding: 40px;
-    scroll-snap-align: start;
-    width: 100%;
+    width: 50%;
     height: 70%;
   }
 
+  .list-container {
+    width: 70vw;
+    overflow:scroll;
+    display: flex;
+    flex-direction: column;
+  }
   .list-item p {
     margin-bottom: 1.4em;
+    width:auto;
   }
 
   #list-item-0 {
@@ -108,15 +117,18 @@ body {
 
   h1 {
     font-size: 3.4em;
+    color: #67923D
   }
 
   h2 {
     font-size: 2em;
     margin-top: 0.4em;
+    color:#4997D0
   }
 
   h1, h2 {
-    font-family: 'Georgia', serif;
+    font-family: 'Lato', sans-serif;
+
   }
 
   .visualization {
