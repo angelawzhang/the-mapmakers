@@ -81,7 +81,7 @@ body {
     line-height: 1.5em;
     scroll-snap-align: start; */
     padding: 40px;
-    width: 50%;
+    width: 85%;
     height: 70%;
   }
 
@@ -106,7 +106,7 @@ body {
 
   .separator {
     border-bottom: #ccc solid 1px;
-    width: 100%;
+    width: 85%;
     margin: 0 40px;
   }
 
@@ -157,3 +157,20 @@ body {
     position: absolute;
     padding: 10px;
   }
+
+/* Pie Charts */
+svg {
+  width: 90%;
+  height: 90%;
+}
+
+/* Sankey */
+.measure {
+  position: absolute;
+  top: 0;
+  left: 0;
+  /* width: 70%; */
+  height: 90%;
+  pointer-events: none;
+  /* background: rgba(255, 0, 0, 0.5); */
+}

@@ -94,11 +94,7 @@
 
   <div class="measure" bind:offsetWidth={width} bind:offsetHeight={height} />
 
-  <!-- <svg
-    width={width + margin.left + margin.right}
-    height={height + margin.top + margin.bottom}
-  > -->
-  <svg width="500" height="500">
+  <svg viewBox="0 0 1000 1000">
     <g>
       <g>
         {#each links as link, i (`link-${i}`)}
