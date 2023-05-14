@@ -8,6 +8,7 @@
   import Sankey from "./Sankey/Sankey.svelte";
   import BarChart from "./BarChart.svelte";
   import BarChart2 from "./BarChart2.svelte";
+  import Radar from "./Radar.svelte";
 
   let list;
   onMount(async () => {
@@ -52,7 +53,7 @@
       {:else if item.name === "Guatemala"}
         <BarChart2 />
       {:else if item.name === "Mexico"}
-        <Pie />
+        <Radar />
       {:else if item.name === "Texas"}
         <Pie2 />
       {:else if item.name === "California"}
