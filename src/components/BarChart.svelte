@@ -168,7 +168,9 @@
 
 <h3>Migration Motivations</h3>
 <div>
-  <button on:click={updateData}> {getButtonString(showAll)} </button>
+  <button class="button-4" on:click={updateData}>
+    {getButtonString(showAll)}
+  </button>
 </div>
 
 <div class="chart" bind:clientWidth={width} bind:clientHeight={height}>

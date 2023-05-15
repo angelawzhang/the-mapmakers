@@ -78,7 +78,7 @@
       {:else if item.name === "Guatemala"}
         <img class="round-image" src={busIcon} alt="destroyed bus" />
         <p>{item.description}</p>
-        <!-- <DotGraph /> -->
+        <DotGraph />
         <div class="separator" />
       {:else if item.name === "Mexico"}
         <img
