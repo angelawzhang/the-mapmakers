@@ -50,9 +50,9 @@
       <p>{item.description}</p>
       <!-- Add Svelte components for each section here; add additional ifs accordingly -->
       {#if item.name === "Honduras"}
-        <!-- <BarChart /> -->
+        <BarChart />
       {:else if item.name === "Guatemala"}
-        <DotGraph />
+        <!-- <DotGraph /> -->
       {:else if item.name === "Mexico"}
         <Radar />
       {:else if item.name === "Texas"}
