@@ -111,8 +111,26 @@ body {
   }
 
   .head {
-    margin: 0 40px;
+    display: flex;
+    flex-direction: column;
     scroll-snap-align: none;
+    background-color: #223960;
+    min-height: 100%;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .head-title {
+    color: #e6ecf5;
+    font-size: 80px;
+    text-align: center;
+  }
+
+  .head-text {
+    color: #d6deec;
+    font-size: 20px;
+    text-align: center;
+    max-width: 80%;
   }
 
   h1 {

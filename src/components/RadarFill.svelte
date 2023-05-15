@@ -4,8 +4,6 @@
 
   const { data, width, height, xGet, config } = getContext("LayerCake");
 
-  console.log($data[0]);
-
   /**	@type {String} [fill='#f0c'] The radar's fill color. This is technically optional because it comes with a default value but you'll likely want to replace it with your own color. */
   export let fill = "#f0c";
 
