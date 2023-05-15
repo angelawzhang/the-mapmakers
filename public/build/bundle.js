@@ -4,7 +4,7 @@ var app = (function () {
     'use strict';
 
     function noop$4() { }
-    const identity$a = x => x;
+    const identity$b = x => x;
     function assign(tar, src) {
         // @ts-ignore
         for (const k in src)
@@ -30,6 +30,14 @@ var app = (function () {
     }
     function safe_not_equal(a, b) {
         return a != a ? b == b : a !== b || ((a && typeof a === 'object') || typeof a === 'function');
+    }
+    let src_url_equal_anchor;
+    function src_url_equal(element_src, url) {
+        if (!src_url_equal_anchor) {
+            src_url_equal_anchor = document.createElement('a');
+        }
+        src_url_equal_anchor.href = url;
+        return element_src === src_url_equal_anchor.href;
     }
     function is_empty(obj) {
         return Object.keys(obj).length === 0;
@@ -97,6 +105,10 @@ var app = (function () {
     }
     function null_to_empty(value) {
         return value == null ? '' : value;
+    }
+    function set_store_value(store, ret, value) {
+        store.set(value);
+        return ret;
     }
 
     const is_client = typeof window !== 'undefined';
@@ -363,6 +375,28 @@ var app = (function () {
     function onDestroy(fn) {
         get_current_component().$$.on_destroy.push(fn);
     }
+    /**
+     * Associates an arbitrary `context` object with the current component and the specified `key`
+     * and returns that object. The context is then available to children of the component
+     * (including slotted content) with `getContext`.
+     *
+     * Like lifecycle functions, this must be called during component initialisation.
+     *
+     * https://svelte.dev/docs#run-time-svelte-setcontext
+     */
+    function setContext(key, context) {
+        get_current_component().$$.context.set(key, context);
+        return context;
+    }
+    /**
+     * Retrieves the context that belongs to the closest parent component with the specified `key`.
+     * Must be called during component initialisation.
+     *
+     * https://svelte.dev/docs#run-time-svelte-getcontext
+     */
+    function getContext(key) {
+        return get_current_component().$$.context.get(key);
+    }
 
     const dirty_components = [];
     const binding_callbacks = [];
@@ -532,7 +566,7 @@ var app = (function () {
         const group = outros;
         group.r += 1;
         function go() {
-            const { delay = 0, duration = 300, easing = identity$a, tick = noop$4, css } = config || null_transition;
+            const { delay = 0, duration = 300, easing = identity$b, tick = noop$4, css } = config || null_transition;
             if (css)
                 animation_name = create_rule(node, 1, 0, duration, delay, easing, css);
             const start_time = now$1() + delay;
@@ -990,6 +1024,16 @@ var app = (function () {
 
     const subscriber_queue = [];
     /**
+     * Creates a `Readable` store that allows reading by subscription.
+     * @param value initial value
+     * @param {StartStopNotifier}start start and stop notifications for subscriptions
+     */
+    function readable(value, start) {
+        return {
+            subscribe: writable(value, start).subscribe
+        };
+    }
+    /**
      * Create a `Writable` store that allows both updating and reading by subscription.
      * @param {*=}value initial value
      * @param {StartStopNotifier=}start start and stop notifications for subscriptions
@@ -1034,6 +1078,51 @@ var app = (function () {
             };
         }
         return { set, update, subscribe };
+    }
+    function derived(stores, fn, initial_value) {
+        const single = !Array.isArray(stores);
+        const stores_array = single
+            ? [stores]
+            : stores;
+        const auto = fn.length < 2;
+        return readable(initial_value, (set) => {
+            let started = false;
+            const values = [];
+            let pending = 0;
+            let cleanup = noop$4;
+            const sync = () => {
+                if (pending) {
+                    return;
+                }
+                cleanup();
+                const result = fn(single ? values[0] : values, set);
+                if (auto) {
+                    set(result);
+                }
+                else {
+                    cleanup = is_function(result) ? result : noop$4;
+                }
+            };
+            const unsubscribers = stores_array.map((store, i) => subscribe(store, (value) => {
+                values[i] = value;
+                pending &= ~(1 << i);
+                if (started) {
+                    sync();
+                }
+            }, () => {
+                pending |= (1 << i);
+            }));
+            started = true;
+            sync();
+            return function stop() {
+                run_all(unsubscribers);
+                cleanup();
+                // We need to set this to false because callbacks can still happen despite having unsubscribed:
+                // Callbacks might already be placed in the queue which doesn't know it should no longer
+                // invoke this derived store.
+                started = false;
+            };
+        });
     }
 
     const activeListItem = writable(0);
@@ -1501,16 +1590,16 @@ var app = (function () {
       return value !== null && typeof value === "object" ? value.valueOf() : value;
     }
 
-    function identity$9(x) {
+    function identity$a(x) {
       return x;
     }
 
     function group(values, ...keys) {
-      return nest(values, identity$9, identity$9, keys);
+      return nest(values, identity$a, identity$a, keys);
     }
 
     function groups(values, ...keys) {
-      return nest(values, Array.from, identity$9, keys);
+      return nest(values, Array.from, identity$a, keys);
     }
 
     function flatten$2(groups, keys) {
@@ -1529,7 +1618,7 @@ var app = (function () {
     }
 
     function rollup(values, reduce, ...keys) {
-      return nest(values, identity$9, reduce, keys);
+      return nest(values, identity$a, reduce, keys);
     }
 
     function rollups(values, reduce, ...keys) {
@@ -1537,7 +1626,7 @@ var app = (function () {
     }
 
     function index$4(values, ...keys) {
-      return nest(values, identity$9, unique, keys);
+      return nest(values, identity$a, unique, keys);
     }
 
     function indexes(values, ...keys) {
@@ -1702,7 +1791,7 @@ var app = (function () {
     }
 
     function bin() {
-      var value = identity$9,
+      var value = identity$a,
           domain = extent$2,
           threshold = thresholdSturges$1;
 
@@ -2404,7 +2493,7 @@ var app = (function () {
       return set;
     }
 
-    function identity$8(x) {
+    function identity$9(x) {
       return x;
     }
 
@@ -2450,7 +2539,7 @@ var app = (function () {
 
       function axis(context) {
         var values = tickValues == null ? (scale.ticks ? scale.ticks.apply(scale, tickArguments) : scale.domain()) : tickValues,
-            format = tickFormat == null ? (scale.tickFormat ? scale.tickFormat.apply(scale, tickArguments) : identity$8) : tickFormat,
+            format = tickFormat == null ? (scale.tickFormat ? scale.tickFormat.apply(scale, tickArguments) : identity$9) : tickFormat,
             spacing = Math.max(tickSizeInner, 0) + tickPadding,
             range = scale.range(),
             range0 = +range[0] + offset,
@@ -4788,7 +4877,7 @@ var app = (function () {
 
     var degrees$1 = 180 / Math.PI;
 
-    var identity$7 = {
+    var identity$8 = {
       translateX: 0,
       translateY: 0,
       rotate: 0,
@@ -4818,14 +4907,14 @@ var app = (function () {
     /* eslint-disable no-undef */
     function parseCss(value) {
       const m = new (typeof DOMMatrix === "function" ? DOMMatrix : WebKitCSSMatrix)(value + "");
-      return m.isIdentity ? identity$7 : decompose(m.a, m.b, m.c, m.d, m.e, m.f);
+      return m.isIdentity ? identity$8 : decompose(m.a, m.b, m.c, m.d, m.e, m.f);
     }
 
     function parseSvg(value) {
-      if (value == null) return identity$7;
+      if (value == null) return identity$8;
       if (!svgNode) svgNode = document.createElementNS("http://www.w3.org/2000/svg", "g");
       svgNode.setAttribute("transform", value);
-      if (!(value = svgNode.transform.baseVal.consolidate())) return identity$7;
+      if (!(value = svgNode.transform.baseVal.consolidate())) return identity$8;
       value = value.matrix;
       return decompose(value.a, value.b, value.c, value.d, value.e, value.f);
     }
@@ -9135,7 +9224,7 @@ var app = (function () {
       }
     }
 
-    const tau$2 = 2 * Math.PI, pow$2 = Math.pow;
+    const tau$2 = 2 * Math.PI, pow$3 = Math.pow;
 
     function pointX(p) {
       return p[0];
@@ -9271,12 +9360,12 @@ var app = (function () {
         const {inedges, hull, _hullIndex, halfedges, triangles, points} = this;
         if (inedges[i] === -1 || !points.length) return (i + 1) % (points.length >> 1);
         let c = i;
-        let dc = pow$2(x - points[i * 2], 2) + pow$2(y - points[i * 2 + 1], 2);
+        let dc = pow$3(x - points[i * 2], 2) + pow$3(y - points[i * 2 + 1], 2);
         const e0 = inedges[i];
         let e = e0;
         do {
           let t = triangles[e];
-          const dt = pow$2(x - points[t * 2], 2) + pow$2(y - points[t * 2 + 1], 2);
+          const dt = pow$3(x - points[t * 2], 2) + pow$3(y - points[t * 2 + 1], 2);
           if (dt < dc) dc = dt, c = t;
           e = e % 3 === 2 ? e - 2 : e + 1;
           if (triangles[e] !== i) break; // bad triangulation
@@ -9284,7 +9373,7 @@ var app = (function () {
           if (e === -1) {
             e = hull[(_hullIndex[i] + 1) % hull.length];
             if (e !== t) {
-              if (pow$2(x - points[e * 2], 2) + pow$2(y - points[e * 2 + 1], 2) < dc) return e;
+              if (pow$3(x - points[e * 2], 2) + pow$3(y - points[e * 2 + 1], 2) < dc) return e;
             }
             break;
           }
@@ -10897,7 +10986,7 @@ var app = (function () {
       "x": (x) => Math.round(x).toString(16)
     };
 
-    function identity$6(x) {
+    function identity$7(x) {
       return x;
     }
 
@@ -10905,11 +10994,11 @@ var app = (function () {
         prefixes = ["y","z","a","f","p","n","µ","m","","k","M","G","T","P","E","Z","Y"];
 
     function formatLocale$1(locale) {
-      var group = locale.grouping === undefined || locale.thousands === undefined ? identity$6 : formatGroup(map.call(locale.grouping, Number), locale.thousands + ""),
+      var group = locale.grouping === undefined || locale.thousands === undefined ? identity$7 : formatGroup(map.call(locale.grouping, Number), locale.thousands + ""),
           currencyPrefix = locale.currency === undefined ? "" : locale.currency[0] + "",
           currencySuffix = locale.currency === undefined ? "" : locale.currency[1] + "",
           decimal = locale.decimal === undefined ? "." : locale.decimal + "",
-          numerals = locale.numerals === undefined ? identity$6 : formatNumerals(map.call(locale.numerals, String)),
+          numerals = locale.numerals === undefined ? identity$7 : formatNumerals(map.call(locale.numerals, String)),
           percent = locale.percent === undefined ? "%" : locale.percent + "",
           minus = locale.minus === undefined ? "−" : locale.minus + "",
           nan = locale.nan === undefined ? "NaN" : locale.nan + "";
@@ -11441,10 +11530,10 @@ var app = (function () {
     var atan2$1 = Math.atan2;
     var cos$1 = Math.cos;
     var ceil = Math.ceil;
-    var exp = Math.exp;
+    var exp$1 = Math.exp;
     var hypot = Math.hypot;
-    var log$1 = Math.log;
-    var pow$1 = Math.pow;
+    var log$2 = Math.log;
+    var pow$2 = Math.pow;
     var sin$1 = Math.sin;
     var sign$1 = Math.sign || function(x) { return x > 0 ? 1 : x < 0 ? -1 : 0; };
     var sqrt$2 = Math.sqrt;
@@ -13234,7 +13323,7 @@ var app = (function () {
       return interpolate;
     }
 
-    var identity$5 = x => x;
+    var identity$6 = x => x;
 
     var areaSum = new Adder(),
         areaRingSum = new Adder(),
@@ -13617,7 +13706,7 @@ var app = (function () {
 
       path.projection = function(_) {
         if (!arguments.length) return projection;
-        projectionStream = _ == null ? (projection = null, identity$5) : (projection = _).stream;
+        projectionStream = _ == null ? (projection = null, identity$6) : (projection = _).stream;
         return path;
       };
 
@@ -13880,7 +13969,7 @@ var app = (function () {
           sx = 1, // reflectX
           sy = 1, // reflectX
           theta = null, preclip = clipAntimeridian, // pre-clip angle
-          x0 = null, y0, x1, y1, postclip = identity$5, // post-clip extent
+          x0 = null, y0, x1, y1, postclip = identity$6, // post-clip extent
           delta2 = 0.5, // precision
           projectResample,
           projectTransform,
@@ -13914,7 +14003,7 @@ var app = (function () {
       };
 
       projection.clipExtent = function(_) {
-        return arguments.length ? (postclip = _ == null ? (x0 = y0 = x1 = y1 = null, identity$5) : clipRectangle(x0 = +_[0][0], y0 = +_[0][1], x1 = +_[1][0], y1 = +_[1][1]), reset()) : x0 == null ? null : [[x0, y0], [x1, y1]];
+        return arguments.length ? (postclip = _ == null ? (x0 = y0 = x1 = y1 = null, identity$6) : clipRectangle(x0 = +_[0][0], y0 = +_[0][1], x1 = +_[1][0], y1 = +_[1][1]), reset()) : x0 == null ? null : [[x0, y0], [x1, y1]];
       };
 
       projection.scale = function(_) {
@@ -14215,11 +14304,11 @@ var app = (function () {
     }
 
     function mercatorRaw(lambda, phi) {
-      return [lambda, log$1(tan((halfPi$1 + phi) / 2))];
+      return [lambda, log$2(tan((halfPi$1 + phi) / 2))];
     }
 
     mercatorRaw.invert = function(x, y) {
-      return [x, 2 * atan(exp(y)) - halfPi$1];
+      return [x, 2 * atan(exp$1(y)) - halfPi$1];
     };
 
     function mercator() {
@@ -14269,15 +14358,15 @@ var app = (function () {
 
     function conicConformalRaw(y0, y1) {
       var cy0 = cos$1(y0),
-          n = y0 === y1 ? sin$1(y0) : log$1(cy0 / cos$1(y1)) / log$1(tany(y1) / tany(y0)),
-          f = cy0 * pow$1(tany(y0), n) / n;
+          n = y0 === y1 ? sin$1(y0) : log$2(cy0 / cos$1(y1)) / log$2(tany(y1) / tany(y0)),
+          f = cy0 * pow$2(tany(y0), n) / n;
 
       if (!n) return mercatorRaw;
 
       function project(x, y) {
         if (f > 0) { if (y < -halfPi$1 + epsilon$1) y = -halfPi$1 + epsilon$1; }
         else { if (y > halfPi$1 - epsilon$1) y = halfPi$1 - epsilon$1; }
-        var r = f / pow$1(tany(y), n);
+        var r = f / pow$2(tany(y), n);
         return [r * sin$1(n * x), f - r * cos$1(n * x)];
       }
 
@@ -14286,7 +14375,7 @@ var app = (function () {
           l = atan2$1(x, abs$1(fy)) * sign$1(fy);
         if (fy * n < 0)
           l -= pi$1 * sign$1(x) * sign$1(fy);
-        return [l / n, 2 * atan(pow$1(f / r, 1 / n)) - halfPi$1];
+        return [l / n, 2 * atan(pow$2(f / r, 1 / n)) - halfPi$1];
       };
 
       return project;
@@ -14385,7 +14474,7 @@ var app = (function () {
           .clipAngle(60);
     }
 
-    function identity$4() {
+    function identity$5() {
       var k = 1, tx = 0, ty = 0, sx = 1, sy = 1, // scale, translate and reflect
           alpha = 0, ca, sa, // angle
           x0 = null, y0, x1, y1, // clip extent
@@ -14396,7 +14485,7 @@ var app = (function () {
               this.stream.point(p[0], p[1]);
             }
           }),
-          postclip = identity$5,
+          postclip = identity$6,
           cache,
           cacheStream;
 
@@ -14432,7 +14521,7 @@ var app = (function () {
         return arguments.length ? (postclip = _, x0 = y0 = x1 = y1 = null, reset()) : postclip;
       };
       projection.clipExtent = function(_) {
-        return arguments.length ? (postclip = _ == null ? (x0 = y0 = x1 = y1 = null, identity$5) : clipRectangle(x0 = +_[0][0], y0 = +_[0][1], x1 = +_[1][0], y1 = +_[1][1]), reset()) : x0 == null ? null : [[x0, y0], [x1, y1]];
+        return arguments.length ? (postclip = _ == null ? (x0 = y0 = x1 = y1 = null, identity$6) : clipRectangle(x0 = +_[0][0], y0 = +_[0][1], x1 = +_[1][0], y1 = +_[1][1]), reset()) : x0 == null ? null : [[x0, y0], [x1, y1]];
       };
       projection.scale = function(_) {
         return arguments.length ? (k = +_, reset()) : k;
@@ -14519,11 +14608,11 @@ var app = (function () {
     }
 
     function transverseMercatorRaw(lambda, phi) {
-      return [log$1(tan((halfPi$1 + phi) / 2)), -lambda];
+      return [log$2(tan((halfPi$1 + phi) / 2)), -lambda];
     }
 
     transverseMercatorRaw.invert = function(x, y) {
-      return [-y, 2 * atan(exp(x)) - halfPi$1];
+      return [-y, 2 * atan(exp$1(x)) - halfPi$1];
     };
 
     function transverseMercator() {
@@ -16570,7 +16659,7 @@ var app = (function () {
 
     var unit = [0, 1];
 
-    function identity$3(x) {
+    function identity$4(x) {
       return x;
     }
 
@@ -16634,14 +16723,14 @@ var app = (function () {
           transform,
           untransform,
           unknown,
-          clamp = identity$3,
+          clamp = identity$4,
           piecewise,
           output,
           input;
 
       function rescale() {
         var n = Math.min(domain.length, range.length);
-        if (clamp !== identity$3) clamp = clamper(domain[0], domain[n - 1]);
+        if (clamp !== identity$4) clamp = clamper(domain[0], domain[n - 1]);
         piecewise = n > 2 ? polymap : bimap;
         output = input = null;
         return scale;
@@ -16668,7 +16757,7 @@ var app = (function () {
       };
 
       scale.clamp = function(_) {
-        return arguments.length ? (clamp = _ ? true : identity$3, rescale()) : clamp !== identity$3;
+        return arguments.length ? (clamp = _ ? true : identity$4, rescale()) : clamp !== identity$4;
       };
 
       scale.interpolate = function(_) {
@@ -16686,7 +16775,7 @@ var app = (function () {
     }
 
     function continuous() {
-      return transformer$2()(identity$3, identity$3);
+      return transformer$2()(identity$4, identity$4);
     }
 
     function tickFormat(start, stop, count, specifier) {
@@ -16782,7 +16871,7 @@ var app = (function () {
       return linearish(scale);
     }
 
-    function identity$2(domain) {
+    function identity$3(domain) {
       var unknown;
 
       function scale(x) {
@@ -16800,7 +16889,7 @@ var app = (function () {
       };
 
       scale.copy = function() {
-        return identity$2(domain).unknown(unknown);
+        return identity$3(domain).unknown(unknown);
       };
 
       domain = arguments.length ? Array.from(domain, number$1) : [0, 1];
@@ -16955,9 +17044,9 @@ var app = (function () {
       return scale;
     }
 
-    function log() {
+    function log$1() {
       const scale = loggish(transformer$2()).domain([1, 10]);
-      scale.copy = () => copy$1(scale, log()).base(scale.base());
+      scale.copy = () => copy$1(scale, log$1()).base(scale.base());
       initRange.apply(scale, arguments);
       return scale;
     }
@@ -16984,11 +17073,11 @@ var app = (function () {
       return linearish(scale);
     }
 
-    function symlog() {
+    function symlog$1() {
       var scale = symlogish(transformer$2());
 
       scale.copy = function() {
-        return copy$1(scale, symlog()).constant(scale.constant());
+        return copy$1(scale, symlog$1()).constant(scale.constant());
       };
 
       return initRange.apply(scale, arguments);
@@ -17009,11 +17098,11 @@ var app = (function () {
     }
 
     function powish(transform) {
-      var scale = transform(identity$3, identity$3),
+      var scale = transform(identity$4, identity$4),
           exponent = 1;
 
       function rescale() {
-        return exponent === 1 ? transform(identity$3, identity$3)
+        return exponent === 1 ? transform(identity$4, identity$4)
             : exponent === 0.5 ? transform(transformSqrt, transformSquare)
             : transform(transformPow(exponent), transformPow(1 / exponent));
       }
@@ -17025,11 +17114,11 @@ var app = (function () {
       return linearish(scale);
     }
 
-    function pow() {
+    function pow$1() {
       var scale = powish(transformer$2());
 
       scale.copy = function() {
-        return copy$1(scale, pow()).exponent(scale.exponent());
+        return copy$1(scale, pow$1()).exponent(scale.exponent());
       };
 
       initRange.apply(scale, arguments);
@@ -17038,7 +17127,7 @@ var app = (function () {
     }
 
     function sqrt$1() {
-      return pow.apply(null, arguments).exponent(0.5);
+      return pow$1.apply(null, arguments).exponent(0.5);
     }
 
     function square$1(x) {
@@ -18425,7 +18514,7 @@ var app = (function () {
           t1,
           k10,
           transform,
-          interpolator = identity$3,
+          interpolator = identity$4,
           clamp = false,
           unknown;
 
@@ -18475,7 +18564,7 @@ var app = (function () {
     }
 
     function sequential() {
-      var scale = linearish(transformer$1()(identity$3));
+      var scale = linearish(transformer$1()(identity$4));
 
       scale.copy = function() {
         return copy(scale, sequential());
@@ -18520,7 +18609,7 @@ var app = (function () {
 
     function sequentialQuantile() {
       var domain = [],
-          interpolator = identity$3;
+          interpolator = identity$4;
 
       function scale(x) {
         if (x != null && !isNaN(x = +x)) return interpolator((bisect(domain, x, 1) - 1) / (domain.length - 1));
@@ -18563,7 +18652,7 @@ var app = (function () {
           t2,
           k10,
           k21,
-          interpolator = identity$3,
+          interpolator = identity$4,
           transform,
           clamp = false,
           unknown;
@@ -18606,7 +18695,7 @@ var app = (function () {
     }
 
     function diverging$1() {
-      var scale = linearish(transformer()(identity$3));
+      var scale = linearish(transformer()(identity$4));
 
       scale.copy = function() {
         return copy(scale, diverging$1());
@@ -19603,12 +19692,12 @@ var app = (function () {
       return b < a ? -1 : b > a ? 1 : b >= a ? 0 : NaN;
     }
 
-    function identity$1(d) {
+    function identity$2(d) {
       return d;
     }
 
     function pie() {
-      var value = identity$1,
+      var value = identity$2,
           sortValues = descending$1,
           sort = null,
           startAngle = constant$2(0),
@@ -20443,7 +20532,7 @@ var app = (function () {
       }
     };
 
-    var cardinalClosed = (function custom(tension) {
+    var curveCardinalClosed = (function custom(tension) {
 
       function cardinal(context) {
         return new CardinalClosed(context, tension);
@@ -20996,7 +21085,7 @@ var app = (function () {
       return series;
     }
 
-    function stack() {
+    function d3Stack() {
       var keys = constant$2([]),
           order = none,
           offset = none$1,
@@ -21211,12 +21300,12 @@ var app = (function () {
       }
     };
 
-    var identity = new Transform(1, 0, 0);
+    var identity$1 = new Transform(1, 0, 0);
 
     transform.prototype = Transform.prototype;
 
     function transform(node) {
-      while (!node.__zoom) if (!(node = node.parentNode)) return identity;
+      while (!node.__zoom) if (!(node = node.parentNode)) return identity$1;
       return node.__zoom;
     }
 
@@ -21249,7 +21338,7 @@ var app = (function () {
     }
 
     function defaultTransform() {
-      return this.__zoom || identity;
+      return this.__zoom || identity$1;
     }
 
     function defaultWheelDelta(event) {
@@ -21352,7 +21441,7 @@ var app = (function () {
           var e = extent.apply(this, arguments),
               t = this.__zoom,
               p0 = p == null ? centroid(e) : typeof p === "function" ? p.apply(this, arguments) : p;
-          return constrain(identity.translate(p0[0], p0[1]).scale(t.k).translate(
+          return constrain(identity$1.translate(p0[0], p0[1]).scale(t.k).translate(
             typeof x === "function" ? -x.apply(this, arguments) : -x,
             typeof y === "function" ? -y.apply(this, arguments) : -y
           ), e, translateExtent);
@@ -21731,7 +21820,7 @@ var app = (function () {
         curveBumpY: bumpY,
         curveBundle: bundle,
         curveCardinal: cardinal,
-        curveCardinalClosed: cardinalClosed,
+        curveCardinalClosed: curveCardinalClosed,
         curveCardinalOpen: cardinalOpen,
         curveCatmullRom: catmullRom,
         curveCatmullRomClosed: catmullRomClosed,
@@ -21841,7 +21930,7 @@ var app = (function () {
         geoGnomonicRaw: gnomonicRaw,
         geoGraticule: graticule,
         geoGraticule10: graticule10,
-        geoIdentity: identity$4,
+        geoIdentity: identity$5,
         geoInterpolate: interpolate,
         geoLength: length$1,
         geoMercator: mercator,
@@ -22031,13 +22120,13 @@ var app = (function () {
         scaleDivergingPow: divergingPow,
         scaleDivergingSqrt: divergingSqrt,
         scaleDivergingSymlog: divergingSymlog,
-        scaleIdentity: identity$2,
+        scaleIdentity: identity$3,
         scaleImplicit: implicit,
         scaleLinear: linear,
-        scaleLog: log,
+        scaleLog: log$1,
         scaleOrdinal: ordinal,
         scalePoint: point$4,
-        scalePow: pow,
+        scalePow: pow$1,
         scaleQuantile: quantile,
         scaleQuantize: quantize,
         scaleRadial: radial,
@@ -22048,7 +22137,7 @@ var app = (function () {
         scaleSequentialSqrt: sequentialSqrt,
         scaleSequentialSymlog: sequentialSymlog,
         scaleSqrt: sqrt$1,
-        scaleSymlog: symlog,
+        scaleSymlog: symlog$1,
         scaleThreshold: threshold,
         scaleTime: time,
         scaleUtc: utcTime,
@@ -22099,7 +22188,7 @@ var app = (function () {
         shuffler: shuffler,
         some: some,
         sort: sort,
-        stack: stack,
+        stack: d3Stack,
         stackOffsetDiverging: diverging,
         stackOffsetExpand: expand,
         stackOffsetNone: none$1,
@@ -22243,16 +22332,16 @@ var app = (function () {
         xml: xml,
         zip: zip,
         zoom: zoom,
-        zoomIdentity: identity,
+        zoomIdentity: identity$1,
         zoomTransform: transform
     });
 
     /* src/components/Pie.svelte generated by Svelte v3.58.0 */
 
-    const { console: console_1$4 } = globals;
-    const file$8 = "src/components/Pie.svelte";
+    const { console: console_1$7 } = globals;
+    const file$e = "src/components/Pie.svelte";
 
-    function get_each_context$5(ctx, list, i) {
+    function get_each_context$8(ctx, list, i) {
     	const child_ctx = ctx.slice();
     	child_ctx[9] = list[i];
     	child_ctx[11] = i;
@@ -22260,7 +22349,7 @@ var app = (function () {
     }
 
     // (72:6) {#each arc_data as data, index}
-    function create_each_block$5(ctx) {
+    function create_each_block$8(ctx) {
     	let path;
     	let path_d_value;
     	let path_fill_value;
@@ -22284,7 +22373,7 @@ var app = (function () {
     			? "#ECDC8F"
     			: /*arc_color*/ ctx[5](/*index*/ ctx[11]));
 
-    			add_location(path, file$8, 72, 8, 1889);
+    			add_location(path, file$e, 72, 8, 1889);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, path, anchor);
@@ -22323,7 +22412,7 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_each_block$5.name,
+    		id: create_each_block$8.name,
     		type: "each",
     		source: "(72:6) {#each arc_data as data, index}",
     		ctx
@@ -22333,7 +22422,7 @@ var app = (function () {
     }
 
     // (98:4) {#if hovered !== -1}
-    function create_if_block$5(ctx) {
+    function create_if_block$8(ctx) {
     	let t0_value = /*arc_data*/ ctx[0][/*hovered*/ ctx[1]].data[0] + "";
     	let t0;
     	let t1;
@@ -22364,7 +22453,7 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_if_block$5.name,
+    		id: create_if_block$8.name,
     		type: "if",
     		source: "(98:4) {#if hovered !== -1}",
     		ctx
@@ -22373,8 +22462,8 @@ var app = (function () {
     	return block;
     }
 
-    function create_fragment$8(ctx) {
-    	let h2;
+    function create_fragment$e(ctx) {
+    	let h3;
     	let t1;
     	let div1;
     	let svg;
@@ -22387,15 +22476,15 @@ var app = (function () {
     	let each_blocks = [];
 
     	for (let i = 0; i < each_value.length; i += 1) {
-    		each_blocks[i] = create_each_block$5(get_each_context$5(ctx, each_value, i));
+    		each_blocks[i] = create_each_block$8(get_each_context$8(ctx, each_value, i));
     	}
 
-    	let if_block = /*hovered*/ ctx[1] !== -1 && create_if_block$5(ctx);
+    	let if_block = /*hovered*/ ctx[1] !== -1 && create_if_block$8(ctx);
 
     	const block = {
     		c: function create() {
-    			h2 = element("h2");
-    			h2.textContent = "Legal vs. Illegal Migration";
+    			h3 = element("h3");
+    			h3.textContent = "Legal vs. Illegal Migration";
     			t1 = space();
     			div1 = element("div");
     			svg = svg_element("svg");
@@ -22408,13 +22497,13 @@ var app = (function () {
     			t2 = space();
     			div0 = element("div");
     			if (if_block) if_block.c();
-    			set_style(h2, "margin-top", "15px");
-    			add_location(h2, file$8, 67, 0, 1680);
+    			set_style(h3, "margin-top", "15px");
+    			add_location(h3, file$e, 67, 0, 1680);
     			attr_dev(g, "transform", "translate(250, 120)");
-    			add_location(g, file$8, 70, 4, 1807);
+    			add_location(g, file$e, 70, 4, 1807);
     			attr_dev(svg, "width", "500");
     			attr_dev(svg, "height", "500");
-    			add_location(svg, file$8, 69, 2, 1772);
+    			add_location(svg, file$e, 69, 2, 1772);
 
     			attr_dev(div0, "class", div0_class_value = "" + (null_to_empty(/*hovered*/ ctx[1] === -1
     			? "tooltip-hidden"
@@ -22422,15 +22511,15 @@ var app = (function () {
 
     			set_style(div0, "left", /*recorded_mouse_position*/ ctx[2].x + 40 + "px");
     			set_style(div0, "top", /*recorded_mouse_position*/ ctx[2].y + 40 + "px");
-    			add_location(div0, file$8, 92, 2, 2395);
+    			add_location(div0, file$e, 92, 2, 2395);
     			attr_dev(div1, "class", "visualization svelte-195a2du");
-    			add_location(div1, file$8, 68, 0, 1742);
+    			add_location(div1, file$e, 68, 0, 1742);
     		},
     		l: function claim(nodes) {
     			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
     		},
     		m: function mount(target, anchor) {
-    			insert_dev(target, h2, anchor);
+    			insert_dev(target, h3, anchor);
     			insert_dev(target, t1, anchor);
     			insert_dev(target, div1, anchor);
     			append_dev(div1, svg);
@@ -22453,12 +22542,12 @@ var app = (function () {
     				let i;
 
     				for (i = 0; i < each_value.length; i += 1) {
-    					const child_ctx = get_each_context$5(ctx, each_value, i);
+    					const child_ctx = get_each_context$8(ctx, each_value, i);
 
     					if (each_blocks[i]) {
     						each_blocks[i].p(child_ctx, dirty);
     					} else {
-    						each_blocks[i] = create_each_block$5(child_ctx);
+    						each_blocks[i] = create_each_block$8(child_ctx);
     						each_blocks[i].c();
     						each_blocks[i].m(g, null);
     					}
@@ -22475,7 +22564,7 @@ var app = (function () {
     				if (if_block) {
     					if_block.p(ctx, dirty);
     				} else {
-    					if_block = create_if_block$5(ctx);
+    					if_block = create_if_block$8(ctx);
     					if_block.c();
     					if_block.m(div0, null);
     				}
@@ -22501,7 +22590,7 @@ var app = (function () {
     		i: noop$4,
     		o: noop$4,
     		d: function destroy(detaching) {
-    			if (detaching) detach_dev(h2);
+    			if (detaching) detach_dev(h3);
     			if (detaching) detach_dev(t1);
     			if (detaching) detach_dev(div1);
     			destroy_each(each_blocks, detaching);
@@ -22511,7 +22600,7 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_fragment$8.name,
+    		id: create_fragment$e.name,
     		type: "component",
     		source: "",
     		ctx
@@ -22520,7 +22609,7 @@ var app = (function () {
     	return block;
     }
 
-    function instance$8($$self, $$props, $$invalidate) {
+    function instance$e($$self, $$props, $$invalidate) {
     	let { $$slots: slots = {}, $$scope } = $$props;
     	validate_slots('Pie', slots, []);
 
@@ -22603,7 +22692,7 @@ var app = (function () {
     	const writable_props = [];
 
     	Object.keys($$props).forEach(key => {
-    		if (!~writable_props.indexOf(key) && key.slice(0, 2) !== '$$' && key !== 'slot') console_1$4.warn(`<Pie> was created with unknown prop '${key}'`);
+    		if (!~writable_props.indexOf(key) && key.slice(0, 2) !== '$$' && key !== 'slot') console_1$7.warn(`<Pie> was created with unknown prop '${key}'`);
     	});
 
     	const mouseover_handler = (index, event) => {
@@ -22666,23 +22755,23 @@ var app = (function () {
     class Pie extends SvelteComponentDev {
     	constructor(options) {
     		super(options);
-    		init$1(this, options, instance$8, create_fragment$8, safe_not_equal, {});
+    		init$1(this, options, instance$e, create_fragment$e, safe_not_equal, {});
 
     		dispatch_dev("SvelteRegisterComponent", {
     			component: this,
     			tagName: "Pie",
     			options,
-    			id: create_fragment$8.name
+    			id: create_fragment$e.name
     		});
     	}
     }
 
     /* src/components/Pie2.svelte generated by Svelte v3.58.0 */
 
-    const { console: console_1$3 } = globals;
-    const file$7 = "src/components/Pie2.svelte";
+    const { console: console_1$6 } = globals;
+    const file$d = "src/components/Pie2.svelte";
 
-    function get_each_context$4(ctx, list, i) {
+    function get_each_context$7(ctx, list, i) {
     	const child_ctx = ctx.slice();
     	child_ctx[9] = list[i];
     	child_ctx[11] = i;
@@ -22690,7 +22779,7 @@ var app = (function () {
     }
 
     // (51:6) {#each arc_data as data, index}
-    function create_each_block$4(ctx) {
+    function create_each_block$7(ctx) {
     	let path;
     	let path_d_value;
     	let path_fill_value;
@@ -22714,7 +22803,7 @@ var app = (function () {
     			? "#3C3B6E"
     			: /*arc_color*/ ctx[5](/*data*/ ctx[9].data[0]));
 
-    			add_location(path, file$7, 51, 8, 1316);
+    			add_location(path, file$d, 51, 8, 1316);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, path, anchor);
@@ -22753,7 +22842,7 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_each_block$4.name,
+    		id: create_each_block$7.name,
     		type: "each",
     		source: "(51:6) {#each arc_data as data, index}",
     		ctx
@@ -22763,7 +22852,7 @@ var app = (function () {
     }
 
     // (77:4) {#if hovered !== -1}
-    function create_if_block$4(ctx) {
+    function create_if_block$7(ctx) {
     	let t0_value = /*arc_data*/ ctx[0][/*hovered*/ ctx[1]].data[0] + "";
     	let t0;
     	let t1;
@@ -22794,7 +22883,7 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_if_block$4.name,
+    		id: create_if_block$7.name,
     		type: "if",
     		source: "(77:4) {#if hovered !== -1}",
     		ctx
@@ -22803,8 +22892,8 @@ var app = (function () {
     	return block;
     }
 
-    function create_fragment$7(ctx) {
-    	let h2;
+    function create_fragment$d(ctx) {
+    	let h3;
     	let t1;
     	let div1;
     	let svg;
@@ -22817,15 +22906,15 @@ var app = (function () {
     	let each_blocks = [];
 
     	for (let i = 0; i < each_value.length; i += 1) {
-    		each_blocks[i] = create_each_block$4(get_each_context$4(ctx, each_value, i));
+    		each_blocks[i] = create_each_block$7(get_each_context$7(ctx, each_value, i));
     	}
 
-    	let if_block = /*hovered*/ ctx[1] !== -1 && create_if_block$4(ctx);
+    	let if_block = /*hovered*/ ctx[1] !== -1 && create_if_block$7(ctx);
 
     	const block = {
     		c: function create() {
-    			h2 = element("h2");
-    			h2.textContent = "Migration Succeeded or Failed?";
+    			h3 = element("h3");
+    			h3.textContent = "Migration Succeeded or Failed?";
     			t1 = space();
     			div1 = element("div");
     			svg = svg_element("svg");
@@ -22838,13 +22927,13 @@ var app = (function () {
     			t2 = space();
     			div0 = element("div");
     			if (if_block) if_block.c();
-    			set_style(h2, "margin-top", "15px");
-    			add_location(h2, file$7, 46, 0, 1104);
+    			set_style(h3, "margin-top", "15px");
+    			add_location(h3, file$d, 46, 0, 1104);
     			attr_dev(g, "transform", "translate(250, 120)");
-    			add_location(g, file$7, 49, 4, 1234);
+    			add_location(g, file$d, 49, 4, 1234);
     			attr_dev(svg, "width", "500");
     			attr_dev(svg, "height", "500");
-    			add_location(svg, file$7, 48, 2, 1199);
+    			add_location(svg, file$d, 48, 2, 1199);
 
     			attr_dev(div0, "class", div0_class_value = "" + (null_to_empty(/*hovered*/ ctx[1] === -1
     			? "tooltip-hidden"
@@ -22852,15 +22941,15 @@ var app = (function () {
 
     			set_style(div0, "left", /*recorded_mouse_position*/ ctx[2].x + 40 + "px");
     			set_style(div0, "top", /*recorded_mouse_position*/ ctx[2].y + 40 + "px");
-    			add_location(div0, file$7, 71, 2, 1829);
+    			add_location(div0, file$d, 71, 2, 1829);
     			attr_dev(div1, "class", "visualization svelte-1rt2g3s");
-    			add_location(div1, file$7, 47, 0, 1169);
+    			add_location(div1, file$d, 47, 0, 1169);
     		},
     		l: function claim(nodes) {
     			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
     		},
     		m: function mount(target, anchor) {
-    			insert_dev(target, h2, anchor);
+    			insert_dev(target, h3, anchor);
     			insert_dev(target, t1, anchor);
     			insert_dev(target, div1, anchor);
     			append_dev(div1, svg);
@@ -22883,12 +22972,12 @@ var app = (function () {
     				let i;
 
     				for (i = 0; i < each_value.length; i += 1) {
-    					const child_ctx = get_each_context$4(ctx, each_value, i);
+    					const child_ctx = get_each_context$7(ctx, each_value, i);
 
     					if (each_blocks[i]) {
     						each_blocks[i].p(child_ctx, dirty);
     					} else {
-    						each_blocks[i] = create_each_block$4(child_ctx);
+    						each_blocks[i] = create_each_block$7(child_ctx);
     						each_blocks[i].c();
     						each_blocks[i].m(g, null);
     					}
@@ -22905,7 +22994,7 @@ var app = (function () {
     				if (if_block) {
     					if_block.p(ctx, dirty);
     				} else {
-    					if_block = create_if_block$4(ctx);
+    					if_block = create_if_block$7(ctx);
     					if_block.c();
     					if_block.m(div0, null);
     				}
@@ -22931,7 +23020,7 @@ var app = (function () {
     		i: noop$4,
     		o: noop$4,
     		d: function destroy(detaching) {
-    			if (detaching) detach_dev(h2);
+    			if (detaching) detach_dev(h3);
     			if (detaching) detach_dev(t1);
     			if (detaching) detach_dev(div1);
     			destroy_each(each_blocks, detaching);
@@ -22941,7 +23030,7 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_fragment$7.name,
+    		id: create_fragment$d.name,
     		type: "component",
     		source: "",
     		ctx
@@ -22950,7 +23039,7 @@ var app = (function () {
     	return block;
     }
 
-    function instance$7($$self, $$props, $$invalidate) {
+    function instance$d($$self, $$props, $$invalidate) {
     	let { $$slots: slots = {}, $$scope } = $$props;
     	validate_slots('Pie2', slots, []);
 
@@ -22986,7 +23075,7 @@ var app = (function () {
     	const writable_props = [];
 
     	Object.keys($$props).forEach(key => {
-    		if (!~writable_props.indexOf(key) && key.slice(0, 2) !== '$$' && key !== 'slot') console_1$3.warn(`<Pie2> was created with unknown prop '${key}'`);
+    		if (!~writable_props.indexOf(key) && key.slice(0, 2) !== '$$' && key !== 'slot') console_1$6.warn(`<Pie2> was created with unknown prop '${key}'`);
     	});
 
     	const mouseover_handler = (index, event) => {
@@ -23049,13 +23138,13 @@ var app = (function () {
     class Pie2 extends SvelteComponentDev {
     	constructor(options) {
     		super(options);
-    		init$1(this, options, instance$7, create_fragment$7, safe_not_equal, {});
+    		init$1(this, options, instance$d, create_fragment$d, safe_not_equal, {});
 
     		dispatch_dev("SvelteRegisterComponent", {
     			component: this,
     			tagName: "Pie2",
     			options,
-    			id: create_fragment$7.name
+    			id: create_fragment$d.name
     		});
     	}
     }
@@ -23456,9 +23545,9 @@ var app = (function () {
 
     /* src/components/Sankey/Group.svelte generated by Svelte v3.58.0 */
 
-    const file$6 = "src/components/Sankey/Group.svelte";
+    const file$c = "src/components/Sankey/Group.svelte";
 
-    function create_fragment$6(ctx) {
+    function create_fragment$c(ctx) {
     	let g;
     	let g_transform_value;
     	let current;
@@ -23470,7 +23559,7 @@ var app = (function () {
     			g = svg_element("g");
     			if (default_slot) default_slot.c();
     			attr_dev(g, "transform", g_transform_value = `translate(${/*left*/ ctx[0]}, ${/*top*/ ctx[1]})`);
-    			add_location(g, file$6, 5, 0, 65);
+    			add_location(g, file$c, 5, 0, 65);
     		},
     		l: function claim(nodes) {
     			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
@@ -23521,7 +23610,7 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_fragment$6.name,
+    		id: create_fragment$c.name,
     		type: "component",
     		source: "",
     		ctx
@@ -23530,7 +23619,7 @@ var app = (function () {
     	return block;
     }
 
-    function instance$6($$self, $$props, $$invalidate) {
+    function instance$c($$self, $$props, $$invalidate) {
     	let { $$slots: slots = {}, $$scope } = $$props;
     	validate_slots('Group', slots, ['default']);
     	let { left = 0 } = $$props;
@@ -23564,13 +23653,13 @@ var app = (function () {
     class Group extends SvelteComponentDev {
     	constructor(options) {
     		super(options);
-    		init$1(this, options, instance$6, create_fragment$6, safe_not_equal, { left: 0, top: 1 });
+    		init$1(this, options, instance$c, create_fragment$c, safe_not_equal, { left: 0, top: 1 });
 
     		dispatch_dev("SvelteRegisterComponent", {
     			component: this,
     			tagName: "Group",
     			options,
-    			id: create_fragment$6.name
+    			id: create_fragment$c.name
     		});
     	}
 
@@ -23663,17 +23752,17 @@ var app = (function () {
 
     /* src/components/Sankey/Sankey.svelte generated by Svelte v3.58.0 */
 
-    const { console: console_1$2 } = globals;
-    const file$5 = "src/components/Sankey/Sankey.svelte";
+    const { console: console_1$5 } = globals;
+    const file$b = "src/components/Sankey/Sankey.svelte";
 
-    function get_each_context$3(ctx, list, i) {
+    function get_each_context$6(ctx, list, i) {
     	const child_ctx = ctx.slice();
     	child_ctx[25] = list[i];
     	child_ctx[27] = i;
     	return child_ctx;
     }
 
-    function get_each_context_1$2(ctx, list, i) {
+    function get_each_context_1$3(ctx, list, i) {
     	const child_ctx = ctx.slice();
     	child_ctx[28] = list[i];
     	child_ctx[27] = i;
@@ -23681,7 +23770,7 @@ var app = (function () {
     }
 
     // (114:8) {#each links as link, i (`link-${i}
-    function create_each_block_1$2(key_1, ctx) {
+    function create_each_block_1$3(key_1, ctx) {
     	let path_1;
     	let path_1_key_value;
     	let path_1_d_value;
@@ -23718,7 +23807,7 @@ var app = (function () {
     			: 0.1);
 
     			attr_dev(path_1, "fill", "none");
-    			add_location(path_1, file$5, 114, 10, 2910);
+    			add_location(path_1, file$b, 114, 10, 2910);
     			this.first = path_1;
     		},
     		m: function mount(target, anchor) {
@@ -23771,7 +23860,7 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_each_block_1$2.name,
+    		id: create_each_block_1$3.name,
     		type: "each",
     		source: "(114:8) {#each links as link, i (`link-${i}",
     		ctx
@@ -23781,7 +23870,7 @@ var app = (function () {
     }
 
     // (143:8) <Group top={node.y0} left={node.x0}>
-    function create_default_slot(ctx) {
+    function create_default_slot$1(ctx) {
     	let rect;
     	let rect_id_value;
     	let rect_width_value;
@@ -23814,13 +23903,13 @@ var app = (function () {
     			attr_dev(rect, "opacity", 0.5);
     			attr_dev(rect, "stroke", "white");
     			attr_dev(rect, "stroke-width", 2);
-    			add_location(rect, file$5, 143, 10, 3823);
+    			add_location(rect, file$b, 143, 10, 3823);
     			attr_dev(text_1, "x", 30);
     			attr_dev(text_1, "y", text_1_y_value = (/*node*/ ctx[25].y1 - /*node*/ ctx[25].y0) / 2);
     			attr_dev(text_1, "dy", 5);
     			set_style(text_1, "font", "16px sans-serif");
     			attr_dev(text_1, "_verticalanchor", "middle");
-    			add_location(text_1, file$5, 170, 10, 4632);
+    			add_location(text_1, file$b, 170, 10, 4632);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, rect, anchor);
@@ -23877,7 +23966,7 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_default_slot.name,
+    		id: create_default_slot$1.name,
     		type: "slot",
     		source: "(143:8) <Group top={node.y0} left={node.x0}>",
     		ctx
@@ -23887,7 +23976,7 @@ var app = (function () {
     }
 
     // (142:6) {#each nodes as node, i (`node-${i}
-    function create_each_block$3(key_1, ctx) {
+    function create_each_block$6(key_1, ctx) {
     	let first;
     	let group;
     	let current;
@@ -23896,7 +23985,7 @@ var app = (function () {
     			props: {
     				top: /*node*/ ctx[25].y0,
     				left: /*node*/ ctx[25].x0,
-    				$$slots: { default: [create_default_slot] },
+    				$$slots: { default: [create_default_slot$1] },
     				$$scope: { ctx }
     			},
     			$$inline: true
@@ -23944,7 +24033,7 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_each_block$3.name,
+    		id: create_each_block$6.name,
     		type: "each",
     		source: "(142:6) {#each nodes as node, i (`node-${i}",
     		ctx
@@ -23954,7 +24043,7 @@ var app = (function () {
     }
 
     // (190:4) {#if nodeHovered !== -1}
-    function create_if_block_1$1(ctx) {
+    function create_if_block_1$2(ctx) {
     	let p0;
     	let t0;
     	let t1_value = /*nodes*/ ctx[7][/*nodeHovered*/ ctx[4]].name + "";
@@ -23974,8 +24063,8 @@ var app = (function () {
     			p1 = element("p");
     			t3 = text$1("Number of People: ");
     			t4 = text$1(t4_value);
-    			add_location(p0, file$5, 190, 6, 5115);
-    			add_location(p1, file$5, 191, 6, 5166);
+    			add_location(p0, file$b, 190, 6, 5115);
+    			add_location(p1, file$b, 191, 6, 5166);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, p0, anchor);
@@ -23999,7 +24088,7 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_if_block_1$1.name,
+    		id: create_if_block_1$2.name,
     		type: "if",
     		source: "(190:4) {#if nodeHovered !== -1}",
     		ctx
@@ -24009,7 +24098,7 @@ var app = (function () {
     }
 
     // (201:4) {#if linkHovered !== -1}
-    function create_if_block$3(ctx) {
+    function create_if_block$6(ctx) {
     	let p;
     	let t0;
     	let t1_value = /*links*/ ctx[3][/*linkHovered*/ ctx[5]].value + "";
@@ -24030,7 +24119,7 @@ var app = (function () {
     			t3 = text$1(t3_value);
     			t4 = text$1(" → ");
     			t5 = text$1(t5_value);
-    			add_location(p, file$5, 201, 6, 5454);
+    			add_location(p, file$b, 201, 6, 5454);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, p, anchor);
@@ -24057,7 +24146,7 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_if_block$3.name,
+    		id: create_if_block$6.name,
     		type: "if",
     		source: "(201:4) {#if linkHovered !== -1}",
     		ctx
@@ -24066,7 +24155,7 @@ var app = (function () {
     	return block;
     }
 
-    function create_fragment$5(ctx) {
+    function create_fragment$b(ctx) {
     	let div5;
     	let h2;
     	let t1;
@@ -24100,27 +24189,27 @@ var app = (function () {
     	let each_value_1 = /*links*/ ctx[3];
     	validate_each_argument(each_value_1);
     	const get_key = ctx => `link-${/*i*/ ctx[27]}`;
-    	validate_each_keys(ctx, each_value_1, get_each_context_1$2, get_key);
+    	validate_each_keys(ctx, each_value_1, get_each_context_1$3, get_key);
 
     	for (let i = 0; i < each_value_1.length; i += 1) {
-    		let child_ctx = get_each_context_1$2(ctx, each_value_1, i);
+    		let child_ctx = get_each_context_1$3(ctx, each_value_1, i);
     		let key = get_key(child_ctx);
-    		each0_lookup.set(key, each_blocks_1[i] = create_each_block_1$2(key, child_ctx));
+    		each0_lookup.set(key, each_blocks_1[i] = create_each_block_1$3(key, child_ctx));
     	}
 
     	let each_value = /*nodes*/ ctx[7];
     	validate_each_argument(each_value);
     	const get_key_1 = ctx => `node-${/*i*/ ctx[27]}`;
-    	validate_each_keys(ctx, each_value, get_each_context$3, get_key_1);
+    	validate_each_keys(ctx, each_value, get_each_context$6, get_key_1);
 
     	for (let i = 0; i < each_value.length; i += 1) {
-    		let child_ctx = get_each_context$3(ctx, each_value, i);
+    		let child_ctx = get_each_context$6(ctx, each_value, i);
     		let key = get_key_1(child_ctx);
-    		each1_lookup.set(key, each_blocks[i] = create_each_block$3(key, child_ctx));
+    		each1_lookup.set(key, each_blocks[i] = create_each_block$6(key, child_ctx));
     	}
 
-    	let if_block0 = /*nodeHovered*/ ctx[4] !== -1 && create_if_block_1$1(ctx);
-    	let if_block1 = /*linkHovered*/ ctx[5] !== -1 && create_if_block$3(ctx);
+    	let if_block0 = /*nodeHovered*/ ctx[4] !== -1 && create_if_block_1$2(ctx);
+    	let if_block1 = /*linkHovered*/ ctx[5] !== -1 && create_if_block$6(ctx);
 
     	const block = {
     		c: function create() {
@@ -24158,19 +24247,19 @@ var app = (function () {
     			t8 = space();
     			div4 = element("div");
     			set_style(h2, "margin-top", "15px");
-    			add_location(h2, file$5, 90, 2, 2003);
-    			add_location(br0, file$5, 102, 6, 2530);
-    			add_location(br1, file$5, 102, 12, 2536);
+    			add_location(h2, file$b, 90, 2, 2003);
+    			add_location(br0, file$b, 102, 6, 2530);
+    			add_location(br1, file$b, 102, 12, 2536);
     			attr_dev(p, "class", "center-text");
-    			add_location(p, file$5, 95, 4, 2116);
-    			add_location(div0, file$5, 94, 2, 2106);
+    			add_location(p, file$b, 95, 4, 2116);
+    			add_location(div0, file$b, 94, 2, 2106);
     			attr_dev(div1, "class", "measure svelte-1nebu75");
     			add_render_callback(() => /*div1_elementresize_handler*/ ctx[18].call(div1));
-    			add_location(div1, file$5, 108, 2, 2726);
-    			add_location(g0, file$5, 112, 6, 2849);
-    			add_location(g1, file$5, 111, 4, 2839);
+    			add_location(div1, file$b, 108, 2, 2726);
+    			add_location(g0, file$b, 112, 6, 2849);
+    			add_location(g1, file$b, 111, 4, 2839);
     			attr_dev(svg, "viewBox", "0 0 1000 1000");
-    			add_location(svg, file$5, 110, 2, 2805);
+    			add_location(svg, file$b, 110, 2, 2805);
 
     			attr_dev(div2, "class", div2_class_value = "" + (null_to_empty(/*nodeHovered*/ ctx[4] === -1
     			? "tooltip-hidden"
@@ -24178,7 +24267,7 @@ var app = (function () {
 
     			set_style(div2, "left", /*recorded_mouse_position*/ ctx[6].x + 40 + "px");
     			set_style(div2, "top", /*recorded_mouse_position*/ ctx[6].y + 40 + "px");
-    			add_location(div2, file$5, 184, 2, 4901);
+    			add_location(div2, file$b, 184, 2, 4901);
 
     			attr_dev(div3, "class", div3_class_value = "" + (null_to_empty(/*linkHovered*/ ctx[5] === -1
     			? "tooltip-hidden"
@@ -24186,11 +24275,11 @@ var app = (function () {
 
     			set_style(div3, "left", /*recorded_mouse_position*/ ctx[6].x + 40 + "px");
     			set_style(div3, "top", /*recorded_mouse_position*/ ctx[6].y + 40 + "px");
-    			add_location(div3, file$5, 195, 2, 5240);
+    			add_location(div3, file$b, 195, 2, 5240);
     			attr_dev(div4, "class", "measure svelte-1nebu75");
     			add_render_callback(() => /*div4_elementresize_handler*/ ctx[23].call(div4));
-    			add_location(div4, file$5, 206, 2, 5602);
-    			add_location(div5, file$5, 89, 0, 1995);
+    			add_location(div4, file$b, 206, 2, 5602);
+    			add_location(div5, file$b, 89, 0, 1995);
     		},
     		l: function claim(nodes) {
     			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
@@ -24240,16 +24329,16 @@ var app = (function () {
     			if (dirty & /*links, path, undefined, highlightLinkIndexes, colors, Math, linkHovered, recorded_mouse_position, event*/ 876) {
     				each_value_1 = /*links*/ ctx[3];
     				validate_each_argument(each_value_1);
-    				validate_each_keys(ctx, each_value_1, get_each_context_1$2, get_key);
-    				each_blocks_1 = update_keyed_each(each_blocks_1, dirty, get_key, 1, ctx, each_value_1, each0_lookup, g0, destroy_block, create_each_block_1$2, null, get_each_context_1$2);
+    				validate_each_keys(ctx, each_value_1, get_each_context_1$3, get_key);
+    				each_blocks_1 = update_keyed_each(each_blocks_1, dirty, get_key, 1, ctx, each_value_1, each0_lookup, g0, destroy_block, create_each_block_1$3, null, get_each_context_1$3);
     			}
 
     			if (dirty & /*nodes, highlightLinkIndexes, nodeHovered, recorded_mouse_position, event*/ 464) {
     				each_value = /*nodes*/ ctx[7];
     				validate_each_argument(each_value);
     				group_outros();
-    				validate_each_keys(ctx, each_value, get_each_context$3, get_key_1);
-    				each_blocks = update_keyed_each(each_blocks, dirty, get_key_1, 1, ctx, each_value, each1_lookup, g1, outro_and_destroy_block, create_each_block$3, null, get_each_context$3);
+    				validate_each_keys(ctx, each_value, get_each_context$6, get_key_1);
+    				each_blocks = update_keyed_each(each_blocks, dirty, get_key_1, 1, ctx, each_value, each1_lookup, g1, outro_and_destroy_block, create_each_block$6, null, get_each_context$6);
     				check_outros();
     			}
 
@@ -24257,7 +24346,7 @@ var app = (function () {
     				if (if_block0) {
     					if_block0.p(ctx, dirty);
     				} else {
-    					if_block0 = create_if_block_1$1(ctx);
+    					if_block0 = create_if_block_1$2(ctx);
     					if_block0.c();
     					if_block0.m(div2, null);
     				}
@@ -24284,7 +24373,7 @@ var app = (function () {
     				if (if_block1) {
     					if_block1.p(ctx, dirty);
     				} else {
-    					if_block1 = create_if_block$3(ctx);
+    					if_block1 = create_if_block$6(ctx);
     					if_block1.c();
     					if_block1.m(div3, null);
     				}
@@ -24343,7 +24432,7 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_fragment$5.name,
+    		id: create_fragment$b.name,
     		type: "component",
     		source: "",
     		ctx
@@ -24368,7 +24457,7 @@ var app = (function () {
     	
     };
 
-    function instance$5($$self, $$props, $$invalidate) {
+    function instance$b($$self, $$props, $$invalidate) {
     	let { $$slots: slots = {}, $$scope } = $$props;
     	validate_slots('Sankey', slots, []);
     	let { width = 1000 } = $$props;
@@ -24412,7 +24501,7 @@ var app = (function () {
     	];
 
     	Object.keys($$props).forEach(key => {
-    		if (!~writable_props.indexOf(key) && key.slice(0, 2) !== '$$' && key !== 'slot') console_1$2.warn(`<Sankey> was created with unknown prop '${key}'`);
+    		if (!~writable_props.indexOf(key) && key.slice(0, 2) !== '$$' && key !== 'slot') console_1$5.warn(`<Sankey> was created with unknown prop '${key}'`);
     	});
 
     	function div1_elementresize_handler() {
@@ -24574,7 +24663,7 @@ var app = (function () {
     	constructor(options) {
     		super(options);
 
-    		init$1(this, options, instance$5, create_fragment$5, safe_not_equal, {
+    		init$1(this, options, instance$b, create_fragment$b, safe_not_equal, {
     			width: 0,
     			height: 1,
     			margin: 10,
@@ -24592,7 +24681,7 @@ var app = (function () {
     			component: this,
     			tagName: "Sankey",
     			options,
-    			id: create_fragment$5.name
+    			id: create_fragment$b.name
     		});
     	}
 
@@ -24721,17 +24810,17 @@ var app = (function () {
 
     /* src/components/BarChart.svelte generated by Svelte v3.58.0 */
 
-    const { console: console_1$1 } = globals;
-    const file$4 = "src/components/BarChart.svelte";
+    const { console: console_1$4 } = globals;
+    const file$a = "src/components/BarChart.svelte";
 
-    function get_each_context$2(ctx, list, i) {
+    function get_each_context$5(ctx, list, i) {
     	const child_ctx = ctx.slice();
     	child_ctx[18] = list[i];
     	child_ctx[20] = i;
     	return child_ctx;
     }
 
-    function get_each_context_1$1(ctx, list, i) {
+    function get_each_context_1$2(ctx, list, i) {
     	const child_ctx = ctx.slice();
     	child_ctx[18] = list[i];
     	return child_ctx;
@@ -24743,7 +24832,7 @@ var app = (function () {
     	return child_ctx;
     }
 
-    // (98:6) {#each yTicks as tick}
+    // (178:6) {#each yTicks as tick}
     function create_each_block_2$1(ctx) {
     	let g;
     	let line;
@@ -24762,12 +24851,12 @@ var app = (function () {
     			t0 = text$1(t0_value);
     			t1 = text$1(t1_value);
     			attr_dev(line, "x2", "100%");
-    			add_location(line, file$4, 102, 10, 3555);
+    			add_location(line, file$a, 182, 10, 4617);
     			attr_dev(text_1, "y", "-4");
-    			add_location(text_1, file$4, 103, 10, 3584);
-    			attr_dev(g, "class", "tick tick-" + /*tick*/ ctx[23] + " svelte-1ykoh89");
+    			add_location(text_1, file$a, 183, 10, 4646);
+    			attr_dev(g, "class", "tick tick-" + /*tick*/ ctx[23] + " svelte-pmwbqx");
     			attr_dev(g, "transform", g_transform_value = "translate(0, " + (/*yScale*/ ctx[7](/*tick*/ ctx[23]) - /*padding*/ ctx[10].bottom) + ")");
-    			add_location(g, file$4, 98, 8, 3429);
+    			add_location(g, file$a, 178, 8, 4491);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, g, anchor);
@@ -24790,15 +24879,15 @@ var app = (function () {
     		block,
     		id: create_each_block_2$1.name,
     		type: "each",
-    		source: "(98:6) {#each yTicks as tick}",
+    		source: "(178:6) {#each yTicks as tick}",
     		ctx
     	});
 
     	return block;
     }
 
-    // (112:6) {#each points as point (point.reason)}
-    function create_each_block_1$1(key_1, ctx) {
+    // (192:6) {#each points as point (point.reason)}
+    function create_each_block_1$2(key_1, ctx) {
     	let g;
     	let text_1;
 
@@ -24819,10 +24908,10 @@ var app = (function () {
     			t = text$1(t_value);
     			attr_dev(text_1, "x", text_1_x_value = /*barWidth*/ ctx[6] / 2);
     			attr_dev(text_1, "y", "-4");
-    			add_location(text_1, file$4, 113, 8, 3883);
+    			add_location(text_1, file$a, 193, 10, 4949);
     			attr_dev(g, "class", "tick");
     			attr_dev(g, "transform", g_transform_value = "translate(" + /*xScale*/ ctx[8](/*point*/ ctx[18].reason) + "," + /*height*/ ctx[2] + ")");
-    			add_location(g, file$4, 112, 6, 3803);
+    			add_location(g, file$a, 192, 8, 4867);
     			this.first = g;
     		},
     		m: function mount(target, anchor) {
@@ -24852,17 +24941,17 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_each_block_1$1.name,
+    		id: create_each_block_1$2.name,
     		type: "each",
-    		source: "(112:6) {#each points as point (point.reason)}",
+    		source: "(192:6) {#each points as point (point.reason)}",
     		ctx
     	});
 
     	return block;
     }
 
-    // (122:6) {#each points as point, i}
-    function create_each_block$2(ctx) {
+    // (202:6) {#each points as point, i}
+    function create_each_block$5(ctx) {
     	let rect;
     	let rect_x_value;
     	let rect_y_value;
@@ -24884,8 +24973,8 @@ var app = (function () {
     			attr_dev(rect, "y", rect_y_value = /*yScale*/ ctx[7](/*point*/ ctx[18].numOfHouseholds));
     			attr_dev(rect, "width", rect_width_value = /*barWidth*/ ctx[6] - 4);
     			attr_dev(rect, "height", rect_height_value = /*height*/ ctx[2] - /*padding*/ ctx[10].bottom - /*yScale*/ ctx[7](/*point*/ ctx[18].numOfHouseholds));
-    			attr_dev(rect, "class", "svelte-1ykoh89");
-    			add_location(rect, file$4, 122, 8, 4101);
+    			attr_dev(rect, "class", "svelte-pmwbqx");
+    			add_location(rect, file$a, 202, 8, 5167);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, rect, anchor);
@@ -24939,17 +25028,17 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_each_block$2.name,
+    		id: create_each_block$5.name,
     		type: "each",
-    		source: "(122:6) {#each points as point, i}",
+    		source: "(202:6) {#each points as point, i}",
     		ctx
     	});
 
     	return block;
     }
 
-    // (156:4) {#if hovered !== -1}
-    function create_if_block$2(ctx) {
+    // (236:4) {#if hovered !== -1}
+    function create_if_block$5(ctx) {
     	let p;
     	let t0_value = /*points*/ ctx[0][/*hovered*/ ctx[3]].numOfHouseholds + "";
     	let t0;
@@ -24963,7 +25052,7 @@ var app = (function () {
     			t0 = text$1(t0_value);
     			t1 = text$1(" households main reason of migration was:\n        ");
     			t2 = text$1(t2_value);
-    			add_location(p, file$4, 156, 6, 5052);
+    			add_location(p, file$a, 236, 6, 6118);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, p, anchor);
@@ -24982,17 +25071,17 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_if_block$2.name,
+    		id: create_if_block$5.name,
     		type: "if",
-    		source: "(156:4) {#if hovered !== -1}",
+    		source: "(236:4) {#if hovered !== -1}",
     		ctx
     	});
 
     	return block;
     }
 
-    function create_fragment$4(ctx) {
-    	let h2;
+    function create_fragment$a(ctx) {
+    	let h3;
     	let t1;
     	let div0;
     	let button;
@@ -25027,12 +25116,12 @@ var app = (function () {
     	let each_value_1 = /*points*/ ctx[0];
     	validate_each_argument(each_value_1);
     	const get_key = ctx => /*point*/ ctx[18].reason;
-    	validate_each_keys(ctx, each_value_1, get_each_context_1$1, get_key);
+    	validate_each_keys(ctx, each_value_1, get_each_context_1$2, get_key);
 
     	for (let i = 0; i < each_value_1.length; i += 1) {
-    		let child_ctx = get_each_context_1$1(ctx, each_value_1, i);
+    		let child_ctx = get_each_context_1$2(ctx, each_value_1, i);
     		let key = get_key(child_ctx);
-    		each1_lookup.set(key, each_blocks_1[i] = create_each_block_1$1(key, child_ctx));
+    		each1_lookup.set(key, each_blocks_1[i] = create_each_block_1$2(key, child_ctx));
     	}
 
     	let each_value = /*points*/ ctx[0];
@@ -25040,19 +25129,19 @@ var app = (function () {
     	let each_blocks = [];
 
     	for (let i = 0; i < each_value.length; i += 1) {
-    		each_blocks[i] = create_each_block$2(get_each_context$2(ctx, each_value, i));
+    		each_blocks[i] = create_each_block$5(get_each_context$5(ctx, each_value, i));
     	}
 
     	const out = i => transition_out(each_blocks[i], 1, 1, () => {
     		each_blocks[i] = null;
     	});
 
-    	let if_block = /*hovered*/ ctx[3] !== -1 && create_if_block$2(ctx);
+    	let if_block = /*hovered*/ ctx[3] !== -1 && create_if_block$5(ctx);
 
     	const block = {
     		c: function create() {
-    			h2 = element("h2");
-    			h2.textContent = "Migration Motivations";
+    			h3 = element("h3");
+    			h3.textContent = "Migration Motivations";
     			t1 = space();
     			div0 = element("div");
     			button = element("button");
@@ -25084,19 +25173,19 @@ var app = (function () {
     			t5 = space();
     			div3 = element("div");
     			p = element("p");
-    			p.textContent = "What are some factors that are causing people to migrate from the Northern Triangle? The top 5 reasons of migration, which makes up 89% of the households that responded to the survey, are all due to financial reasons, including searching for a better job or hoping to get more money for food and other basic necessities.";
-    			add_location(h2, file$4, 88, 0, 3098);
-    			add_location(button, file$4, 90, 2, 3137);
-    			add_location(div0, file$4, 89, 0, 3129);
+    			p.textContent = "What are some factors that are causing people to migrate from the Northern\n    Triangle? The top 5 reasons of migration, which makes up 89% of the\n    households that responded to the survey, are all due to financial reasons,\n    including searching for a better job or hoping to get more money for food\n    and other basic necessities.";
+    			add_location(h3, file$a, 168, 0, 4160);
+    			add_location(button, file$a, 170, 2, 4199);
+    			add_location(div0, file$a, 169, 0, 4191);
     			attr_dev(g0, "class", "axis y-axis");
     			attr_dev(g0, "transform", "translate(0," + /*padding*/ ctx[10].top + ")");
-    			add_location(g0, file$4, 96, 4, 3329);
+    			add_location(g0, file$a, 176, 4, 4391);
     			attr_dev(g1, "class", "axis x-axis");
-    			add_location(g1, file$4, 110, 4, 3728);
-    			attr_dev(g2, "class", "bars svelte-1ykoh89");
-    			add_location(g2, file$4, 120, 4, 4043);
+    			add_location(g1, file$a, 190, 4, 4790);
+    			attr_dev(g2, "class", "bars svelte-pmwbqx");
+    			add_location(g2, file$a, 200, 4, 5109);
     			attr_dev(svg, "class", "bar");
-    			add_location(svg, file$4, 94, 2, 3287);
+    			add_location(svg, file$a, 174, 2, 4349);
 
     			attr_dev(div1, "class", div1_class_value = /*hovered*/ ctx[3] === -1
     			? "tooltip-hidden"
@@ -25104,18 +25193,18 @@ var app = (function () {
 
     			set_style(div1, "left", /*recorded_mouse_position*/ ctx[4].x - 1000 + "px");
     			set_style(div1, "top", /*recorded_mouse_position*/ ctx[4].y - 400 + "px");
-    			add_location(div1, file$4, 150, 2, 4843);
+    			add_location(div1, file$a, 230, 2, 5909);
     			attr_dev(div2, "class", "chart");
     			add_render_callback(() => /*div2_elementresize_handler*/ ctx[17].call(div2));
-    			add_location(div2, file$4, 93, 0, 3213);
-    			add_location(p, file$4, 164, 4, 5224);
-    			add_location(div3, file$4, 163, 0, 5214);
+    			add_location(div2, file$a, 173, 0, 4275);
+    			add_location(p, file$a, 244, 2, 6288);
+    			add_location(div3, file$a, 243, 0, 6280);
     		},
     		l: function claim(nodes) {
     			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
     		},
     		m: function mount(target, anchor) {
-    			insert_dev(target, h2, anchor);
+    			insert_dev(target, h3, anchor);
     			insert_dev(target, t1, anchor);
     			insert_dev(target, div0, anchor);
     			append_dev(div0, button);
@@ -25191,8 +25280,8 @@ var app = (function () {
     			if (dirty & /*xScale, points, height, barWidth, width, formatMobile*/ 327) {
     				each_value_1 = /*points*/ ctx[0];
     				validate_each_argument(each_value_1);
-    				validate_each_keys(ctx, each_value_1, get_each_context_1$1, get_key);
-    				each_blocks_1 = update_keyed_each(each_blocks_1, dirty, get_key, 1, ctx, each_value_1, each1_lookup, g1, destroy_block, create_each_block_1$1, null, get_each_context_1$1);
+    				validate_each_keys(ctx, each_value_1, get_each_context_1$2, get_key);
+    				each_blocks_1 = update_keyed_each(each_blocks_1, dirty, get_key, 1, ctx, each_value_1, each1_lookup, g1, destroy_block, create_each_block_1$2, null, get_each_context_1$2);
     			}
 
     			if (dirty & /*xScale, points, yScale, barWidth, height, padding, hovered, console, recorded_mouse_position*/ 1501) {
@@ -25201,13 +25290,13 @@ var app = (function () {
     				let i;
 
     				for (i = 0; i < each_value.length; i += 1) {
-    					const child_ctx = get_each_context$2(ctx, each_value, i);
+    					const child_ctx = get_each_context$5(ctx, each_value, i);
 
     					if (each_blocks[i]) {
     						each_blocks[i].p(child_ctx, dirty);
     						transition_in(each_blocks[i], 1);
     					} else {
-    						each_blocks[i] = create_each_block$2(child_ctx);
+    						each_blocks[i] = create_each_block$5(child_ctx);
     						each_blocks[i].c();
     						transition_in(each_blocks[i], 1);
     						each_blocks[i].m(g2, null);
@@ -25227,7 +25316,7 @@ var app = (function () {
     				if (if_block) {
     					if_block.p(ctx, dirty);
     				} else {
-    					if_block = create_if_block$2(ctx);
+    					if_block = create_if_block$5(ctx);
     					if_block.c();
     					if_block.m(div1, null);
     				}
@@ -25269,7 +25358,7 @@ var app = (function () {
     			current = false;
     		},
     		d: function destroy(detaching) {
-    			if (detaching) detach_dev(h2);
+    			if (detaching) detach_dev(h3);
     			if (detaching) detach_dev(t1);
     			if (detaching) detach_dev(div0);
     			if (detaching) detach_dev(t3);
@@ -25292,7 +25381,7 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_fragment$4.name,
+    		id: create_fragment$a.name,
     		type: "component",
     		source: "",
     		ctx
@@ -25313,7 +25402,7 @@ var app = (function () {
     	}
     }
 
-    function instance$4($$self, $$props, $$invalidate) {
+    function instance$a($$self, $$props, $$invalidate) {
     	let reasons;
     	let xScale;
     	let yScale;
@@ -25392,31 +25481,43 @@ var app = (function () {
     			$$invalidate(0, points = [
     				{
     					id: 1,
+    					reason: "Search for better job",
     					description: "Search for better job",
     					numOfHouseholds: 1239
     				},
     				{
     					id: 2,
+    					reason: "Unemployment",
     					description: "Unemployment",
     					numOfHouseholds: 618
     				},
     				{
     					id: 3,
+    					reason: "Money for other",
     					description: "Money for other",
     					numOfHouseholds: 351
     				},
     				{
     					id: 4,
+    					reason: "Remittances",
     					description: "Remittances",
     					numOfHouseholds: 277
     				},
     				{
     					id: 5,
+    					reason: "Money to buy food",
     					description: "Money to buy food",
     					numOfHouseholds: 234
     				}
     			]);
 
+    			// points = points.map((d) => ({
+    			//   ...d,
+    			//   numOfHouseholds: d.numOfHouseholds > 200 ? d.numOfHouseholds : 0,
+    			// }));
+    			// const timeout = setTimeout(() => {
+    			//   points = points.filter((d) => d.numOfHouseholds > 200);
+    			// }, 200);
     			$$invalidate(5, showAll = false);
     		} else {
     			$$invalidate(0, points = [
@@ -25483,7 +25584,7 @@ var app = (function () {
     	const writable_props = [];
 
     	Object.keys($$props).forEach(key => {
-    		if (!~writable_props.indexOf(key) && key.slice(0, 2) !== '$$' && key !== 'slot') console_1$1.warn(`<BarChart> was created with unknown prop '${key}'`);
+    		if (!~writable_props.indexOf(key) && key.slice(0, 2) !== '$$' && key !== 'slot') console_1$4.warn(`<BarChart> was created with unknown prop '${key}'`);
     	});
 
     	const mouseover_handler = (i, event) => {
@@ -25595,30 +25696,30 @@ var app = (function () {
     class BarChart extends SvelteComponentDev {
     	constructor(options) {
     		super(options);
-    		init$1(this, options, instance$4, create_fragment$4, safe_not_equal, {});
+    		init$1(this, options, instance$a, create_fragment$a, safe_not_equal, {});
 
     		dispatch_dev("SvelteRegisterComponent", {
     			component: this,
     			tagName: "BarChart",
     			options,
-    			id: create_fragment$4.name
+    			id: create_fragment$a.name
     		});
     	}
     }
 
     /* src/components/BarChart2.svelte generated by Svelte v3.58.0 */
 
-    const { console: console_1 } = globals;
-    const file$3 = "src/components/BarChart2.svelte";
+    const { console: console_1$3 } = globals;
+    const file$9 = "src/components/BarChart2.svelte";
 
-    function get_each_context$1(ctx, list, i) {
+    function get_each_context$4(ctx, list, i) {
     	const child_ctx = ctx.slice();
     	child_ctx[16] = list[i];
     	child_ctx[18] = i;
     	return child_ctx;
     }
 
-    function get_each_context_1(ctx, list, i) {
+    function get_each_context_1$1(ctx, list, i) {
     	const child_ctx = ctx.slice();
     	child_ctx[16] = list[i];
     	return child_ctx;
@@ -25650,13 +25751,13 @@ var app = (function () {
     			t1 = text$1(t1_value);
     			attr_dev(line, "x2", "100%");
     			attr_dev(line, "class", "svelte-1no4heg");
-    			add_location(line, file$3, 87, 10, 2560);
+    			add_location(line, file$9, 87, 10, 2560);
     			attr_dev(text_1, "y", "-4");
     			attr_dev(text_1, "class", "svelte-1no4heg");
-    			add_location(text_1, file$3, 88, 10, 2589);
+    			add_location(text_1, file$9, 88, 10, 2589);
     			attr_dev(g, "class", "tick tick-" + /*tick*/ ctx[21] + " svelte-1no4heg");
     			attr_dev(g, "transform", g_transform_value = "translate(0, " + (/*yScale*/ ctx[5](/*tick*/ ctx[21]) - /*padding*/ ctx[9].bottom) + ")");
-    			add_location(g, file$3, 83, 8, 2434);
+    			add_location(g, file$9, 83, 8, 2434);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, g, anchor);
@@ -25687,7 +25788,7 @@ var app = (function () {
     }
 
     // (97:6) {#each points as point (point.reason)}
-    function create_each_block_1(key_1, ctx) {
+    function create_each_block_1$1(key_1, ctx) {
     	let g;
     	let text_1;
 
@@ -25709,10 +25810,10 @@ var app = (function () {
     			attr_dev(text_1, "x", text_1_x_value = /*barWidth*/ ctx[4] / 2);
     			attr_dev(text_1, "y", "-4");
     			attr_dev(text_1, "class", "svelte-1no4heg");
-    			add_location(text_1, file$3, 98, 10, 2892);
+    			add_location(text_1, file$9, 98, 10, 2892);
     			attr_dev(g, "class", "tick svelte-1no4heg");
     			attr_dev(g, "transform", g_transform_value = "translate(" + /*xScale*/ ctx[6](/*point*/ ctx[16].reason) + "," + /*height*/ ctx[1] + ")");
-    			add_location(g, file$3, 97, 8, 2810);
+    			add_location(g, file$9, 97, 8, 2810);
     			this.first = g;
     		},
     		m: function mount(target, anchor) {
@@ -25742,7 +25843,7 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_each_block_1.name,
+    		id: create_each_block_1$1.name,
     		type: "each",
     		source: "(97:6) {#each points as point (point.reason)}",
     		ctx
@@ -25752,7 +25853,7 @@ var app = (function () {
     }
 
     // (107:6) {#each points as point, i (point.reason)}
-    function create_each_block$1(key_1, ctx) {
+    function create_each_block$4(key_1, ctx) {
     	let rect;
     	let rect_x_value;
     	let rect_y_value;
@@ -25777,7 +25878,7 @@ var app = (function () {
     			attr_dev(rect, "width", rect_width_value = /*barWidth*/ ctx[4] - 4);
     			attr_dev(rect, "height", rect_height_value = /*height*/ ctx[1] - /*padding*/ ctx[9].bottom - /*yScale*/ ctx[5](/*point*/ ctx[16].numOfHouseholds));
     			attr_dev(rect, "class", "svelte-1no4heg");
-    			add_location(rect, file$3, 107, 8, 3125);
+    			add_location(rect, file$9, 107, 8, 3125);
     			this.first = rect;
     		},
     		m: function mount(target, anchor) {
@@ -25831,7 +25932,7 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_each_block$1.name,
+    		id: create_each_block$4.name,
     		type: "each",
     		source: "(107:6) {#each points as point, i (point.reason)}",
     		ctx
@@ -25841,7 +25942,7 @@ var app = (function () {
     }
 
     // (135:4) {#if hovered !== -1}
-    function create_if_block$1(ctx) {
+    function create_if_block$4(ctx) {
     	let p;
     	let t0_value = /*points*/ ctx[7][/*hovered*/ ctx[2]].numOfHouseholds + "";
     	let t0;
@@ -25857,7 +25958,7 @@ var app = (function () {
     			t1 = text$1("% of travelers\n        ");
     			t2 = text$1(t2_value);
     			t3 = text$1(" experienced violence.");
-    			add_location(p, file$3, 135, 6, 3926);
+    			add_location(p, file$9, 135, 6, 3926);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, p, anchor);
@@ -25877,7 +25978,7 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_if_block$1.name,
+    		id: create_if_block$4.name,
     		type: "if",
     		source: "(135:4) {#if hovered !== -1}",
     		ctx
@@ -25886,8 +25987,8 @@ var app = (function () {
     	return block;
     }
 
-    function create_fragment$3(ctx) {
-    	let h2;
+    function create_fragment$9(ctx) {
+    	let h3;
     	let t1;
     	let div1;
     	let svg;
@@ -25917,31 +26018,31 @@ var app = (function () {
     	let each_value_1 = /*points*/ ctx[7];
     	validate_each_argument(each_value_1);
     	const get_key = ctx => /*point*/ ctx[16].reason;
-    	validate_each_keys(ctx, each_value_1, get_each_context_1, get_key);
+    	validate_each_keys(ctx, each_value_1, get_each_context_1$1, get_key);
 
     	for (let i = 0; i < each_value_1.length; i += 1) {
-    		let child_ctx = get_each_context_1(ctx, each_value_1, i);
+    		let child_ctx = get_each_context_1$1(ctx, each_value_1, i);
     		let key = get_key(child_ctx);
-    		each1_lookup.set(key, each_blocks_1[i] = create_each_block_1(key, child_ctx));
+    		each1_lookup.set(key, each_blocks_1[i] = create_each_block_1$1(key, child_ctx));
     	}
 
     	let each_value = /*points*/ ctx[7];
     	validate_each_argument(each_value);
     	const get_key_1 = ctx => /*point*/ ctx[16].reason;
-    	validate_each_keys(ctx, each_value, get_each_context$1, get_key_1);
+    	validate_each_keys(ctx, each_value, get_each_context$4, get_key_1);
 
     	for (let i = 0; i < each_value.length; i += 1) {
-    		let child_ctx = get_each_context$1(ctx, each_value, i);
+    		let child_ctx = get_each_context$4(ctx, each_value, i);
     		let key = get_key_1(child_ctx);
-    		each2_lookup.set(key, each_blocks[i] = create_each_block$1(key, child_ctx));
+    		each2_lookup.set(key, each_blocks[i] = create_each_block$4(key, child_ctx));
     	}
 
-    	let if_block = /*hovered*/ ctx[2] !== -1 && create_if_block$1(ctx);
+    	let if_block = /*hovered*/ ctx[2] !== -1 && create_if_block$4(ctx);
 
     	const block = {
     		c: function create() {
-    			h2 = element("h2");
-    			h2.textContent = "Violence Encounters";
+    			h3 = element("h3");
+    			h3.textContent = "Violence Encounters";
     			t1 = space();
     			div1 = element("div");
     			svg = svg_element("svg");
@@ -25970,17 +26071,16 @@ var app = (function () {
     			div2 = element("div");
     			p = element("p");
     			p.textContent = "11.5% of deported Mexican migrants are abandoned by the coyotes they hired,\n    and coyotes are the perpetrators of robbery or assault of migrants 9.1% of\n    the time!";
-    			attr_dev(h2, "class", "svelte-1no4heg");
-    			add_location(h2, file$3, 73, 0, 2142);
+    			add_location(h3, file$9, 73, 0, 2142);
     			attr_dev(g0, "class", "axis y-axis");
     			attr_dev(g0, "transform", "translate(0," + /*padding*/ ctx[9].top + ")");
-    			add_location(g0, file$3, 81, 4, 2334);
+    			add_location(g0, file$9, 81, 4, 2334);
     			attr_dev(g1, "class", "axis x-axis svelte-1no4heg");
-    			add_location(g1, file$3, 95, 4, 2733);
+    			add_location(g1, file$9, 95, 4, 2733);
     			attr_dev(g2, "class", "bars svelte-1no4heg");
-    			add_location(g2, file$3, 105, 4, 3052);
+    			add_location(g2, file$9, 105, 4, 3052);
     			attr_dev(svg, "class", "svelte-1no4heg");
-    			add_location(svg, file$3, 79, 2, 2304);
+    			add_location(svg, file$9, 79, 2, 2304);
 
     			attr_dev(div0, "class", div0_class_value = "" + (null_to_empty(/*hovered*/ ctx[2] === -1
     			? "tooltip-hidden"
@@ -25988,19 +26088,19 @@ var app = (function () {
 
     			set_style(div0, "left", /*recorded_mouse_position*/ ctx[3].x - 650 + "px");
     			set_style(div0, "top", /*recorded_mouse_position*/ ctx[3].y - 700 + "px");
-    			add_location(div0, file$3, 129, 2, 3718);
+    			add_location(div0, file$9, 129, 2, 3718);
     			attr_dev(div1, "class", "chart svelte-1no4heg");
     			add_render_callback(() => /*div1_elementresize_handler*/ ctx[14].call(div1));
-    			add_location(div1, file$3, 78, 0, 2230);
+    			add_location(div1, file$9, 78, 0, 2230);
     			attr_dev(p, "class", "center-text");
-    			add_location(p, file$3, 143, 2, 4100);
-    			add_location(div2, file$3, 142, 0, 4092);
+    			add_location(p, file$9, 143, 2, 4100);
+    			add_location(div2, file$9, 142, 0, 4092);
     		},
     		l: function claim(nodes) {
     			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
     		},
     		m: function mount(target, anchor) {
-    			insert_dev(target, h2, anchor);
+    			insert_dev(target, h3, anchor);
     			insert_dev(target, t1, anchor);
     			insert_dev(target, div1, anchor);
     			append_dev(div1, svg);
@@ -26065,16 +26165,16 @@ var app = (function () {
     			if (dirty & /*xScale, points, height, barWidth, width, formatMobile*/ 211) {
     				each_value_1 = /*points*/ ctx[7];
     				validate_each_argument(each_value_1);
-    				validate_each_keys(ctx, each_value_1, get_each_context_1, get_key);
-    				each_blocks_1 = update_keyed_each(each_blocks_1, dirty, get_key, 1, ctx, each_value_1, each1_lookup, g1, destroy_block, create_each_block_1, null, get_each_context_1);
+    				validate_each_keys(ctx, each_value_1, get_each_context_1$1, get_key);
+    				each_blocks_1 = update_keyed_each(each_blocks_1, dirty, get_key, 1, ctx, each_value_1, each1_lookup, g1, destroy_block, create_each_block_1$1, null, get_each_context_1$1);
     			}
 
     			if (dirty & /*xScale, points, yScale, barWidth, height, padding, hovered, recorded_mouse_position, console*/ 766) {
     				each_value = /*points*/ ctx[7];
     				validate_each_argument(each_value);
     				group_outros();
-    				validate_each_keys(ctx, each_value, get_each_context$1, get_key_1);
-    				each_blocks = update_keyed_each(each_blocks, dirty, get_key_1, 1, ctx, each_value, each2_lookup, g2, outro_and_destroy_block, create_each_block$1, null, get_each_context$1);
+    				validate_each_keys(ctx, each_value, get_each_context$4, get_key_1);
+    				each_blocks = update_keyed_each(each_blocks, dirty, get_key_1, 1, ctx, each_value, each2_lookup, g2, outro_and_destroy_block, create_each_block$4, null, get_each_context$4);
     				check_outros();
     			}
 
@@ -26082,7 +26182,7 @@ var app = (function () {
     				if (if_block) {
     					if_block.p(ctx, dirty);
     				} else {
-    					if_block = create_if_block$1(ctx);
+    					if_block = create_if_block$4(ctx);
     					if_block.c();
     					if_block.m(div0, null);
     				}
@@ -26122,7 +26222,7 @@ var app = (function () {
     			current = false;
     		},
     		d: function destroy(detaching) {
-    			if (detaching) detach_dev(h2);
+    			if (detaching) detach_dev(h3);
     			if (detaching) detach_dev(t1);
     			if (detaching) detach_dev(div1);
     			destroy_each(each_blocks_2, detaching);
@@ -26144,7 +26244,7 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_fragment$3.name,
+    		id: create_fragment$9.name,
     		type: "component",
     		source: "",
     		ctx
@@ -26157,7 +26257,7 @@ var app = (function () {
     	return "'" + tick.toString().slice(-2);
     }
 
-    function instance$3($$self, $$props, $$invalidate) {
+    function instance$9($$self, $$props, $$invalidate) {
     	let reasons;
     	let xScale;
     	let yScale;
@@ -26189,7 +26289,7 @@ var app = (function () {
     	const writable_props = [];
 
     	Object.keys($$props).forEach(key => {
-    		if (!~writable_props.indexOf(key) && key.slice(0, 2) !== '$$' && key !== 'slot') console_1.warn(`<BarChart2> was created with unknown prop '${key}'`);
+    		if (!~writable_props.indexOf(key) && key.slice(0, 2) !== '$$' && key !== 'slot') console_1$3.warn(`<BarChart2> was created with unknown prop '${key}'`);
     	});
 
     	const mouseover_handler = (i, event) => {
@@ -26313,16 +26413,4999 @@ var app = (function () {
     class BarChart2 extends SvelteComponentDev {
     	constructor(options) {
     		super(options);
-    		init$1(this, options, instance$3, create_fragment$3, safe_not_equal, {});
+    		init$1(this, options, instance$9, create_fragment$9, safe_not_equal, {});
 
     		dispatch_dev("SvelteRegisterComponent", {
     			component: this,
     			tagName: "BarChart2",
     			options,
-    			id: create_fragment$3.name
+    			id: create_fragment$9.name
     		});
     	}
     }
+
+    /**
+    	A function to help truth test values. Returns a `true` if zero.
+    	@param {any} val The value to test.
+    	@returns {any}
+    */
+    function canBeZero (val) {
+    	if (val === 0) {
+    		return true;
+    	}
+    	return val;
+    }
+
+    /**
+    	Make an accessor from a string, number, function or an array of the combination of any
+    	@param {String|Number|Function|Array} acc The accessor function, key or list of them.
+    	@returns {Function} An accessor function.
+    */
+    function makeAccessor (acc) {
+    	if (!canBeZero(acc)) return null;
+    	if (Array.isArray(acc)) {
+    		return d => acc.map(k => {
+    			return typeof k !== 'function' ? d[k] : k(d);
+    		});
+    	} else if (typeof acc !== 'function') { // eslint-disable-line no-else-return
+    		return d => d[acc];
+    	}
+    	return acc;
+    }
+
+    // From Object.fromEntries polyfill https://github.com/tc39/proposal-object-from-entries/blob/master/polyfill.js#L1
+    function fromEntries(iter) {
+    	const obj = {};
+
+    	for (const pair of iter) {
+    		if (Object(pair) !== pair) {
+    			throw new TypeError("iterable for fromEntries should yield objects");
+    		}
+    		// Consistency with Map: contract is that entry has "0" and "1" keys, not
+    		// that it is an array or iterable.
+    		const { "0": key, "1": val } = pair;
+
+    		Object.defineProperty(obj, key, {
+    			configurable: true,
+    			enumerable: true,
+    			writable: true,
+    			value: val,
+    		});
+    	}
+
+    	return obj;
+    }
+
+    /**
+    	Remove undefined fields from an object
+    	@param {object} obj The object to filter
+    	@param {object} [comparisonObj={}] An object that, for any key, if the key is not present on that object, the key will be filtered out. Note, this ignores the value on that object
+    	@returns {object}
+    */
+    function filterObject (obj, comparisonObj = {}) {
+    	return fromEntries(Object.entries(obj).filter(([key, value]) => {
+    		return value !== undefined
+    			&& comparisonObj[key] === undefined;
+    	}));
+    }
+
+    /**
+    	A simple debounce function taken from here https://www.freecodecamp.org/news/javascript-debounce-example/
+    	@param {function} func The function to debounce.
+    	@param {number} timeout The time in ms to wait.
+    	@returns {function}
+    */
+    function debounce(func, timeout = 300) {
+    	let timer;
+    	return (...args) => {
+    		clearTimeout(timer);
+    		timer = setTimeout(() => {
+    			func.apply(this, args);
+    		}, timeout);
+    	};
+    }
+
+    /**
+    	Calculate the unique values of desired fields
+    	For example, data like this:
+    	[{ x: 0, y: -10 }, { x: 10, y: 0 }, { x: 5, y: 10 }]
+    	and a fields object like this:
+    	`{'x': d => d.x, 'y': d => d.y}`
+    	returns an object like this:
+    	`{ x: [0, 10, 5], y: [-10, 0, 10] }`
+    	@param {Array} data A flat array of objects.
+    	@param {{x?: Function, y?: Function, z?: Function, r?: Function}} fields An object containing `x`, `y`, `r` or `z` keys that equal an accessor function. If an accessor function returns an array of values, each value will also be evaluated..
+    	@returns {{x?: [min: Number, max: Number]|[min: String, max: String], y?: [min: Number, max: Number]|[min: String, max: String], z?: [min: Number, max: Number]|[min: String, max: String], r?: [min: Number, max: Number]|[min: String, max: String]}} An object with the same structure as `fields` but instead of an accessor, each key contains an array of unique items.
+    */
+    function calcUniques (data, fields, { sort = false } = {}) {
+    	if (!Array.isArray(data)) {
+    		throw new TypeError(`The first argument of calcUniques() must be an array. You passed in a ${typeof data}. If you got this error using the <LayerCake> component, consider passing a flat array to the \`flatData\` prop. More info: https://layercake.graphics/guide/#flatdata`);
+    	}
+
+    	if (
+    		Array.isArray(fields)
+    		|| fields === undefined
+    		|| fields === null
+    	) {
+    		throw new TypeError('The second argument of calcUniques() must be an '
+    		+ 'object with field names as keys as accessor functions as values.');
+    	}
+
+    	const uniques = {};
+
+    	const keys = Object.keys(fields);
+    	const kl = keys.length;
+    	let i;
+    	let j;
+    	let k;
+    	let s;
+    	let acc;
+    	let val;
+    	let set;
+
+    	const dl = data.length;
+    	for (i = 0; i < kl; i += 1) {
+    		set = new Set();
+    		s = keys[i];
+    		acc = fields[s];
+    		for (j = 0; j < dl; j += 1) {
+    			val = acc(data[j]);
+    			if (Array.isArray(val)) {
+    				const vl = val.length;
+    				for (k = 0; k < vl; k += 1) {
+    					set.add(val[k]);
+    				}
+    			} else {
+    				set.add(val);
+    			}
+    		}
+    		const results = Array.from(set);
+    		uniques[s] = sort === true ? results.sort() : results;
+    	}
+    	return uniques;
+    }
+
+    /**
+    	Calculate the extents of desired fields, skipping `false`, `undefined`, `null` and `NaN` values
+    	For example, data like this:
+    	[{ x: 0, y: -10 }, { x: 10, y: 0 }, { x: 5, y: 10 }]
+    	and a fields object like this:
+    	`{'x': d => d.x, 'y': d => d.y}`
+    	returns an object like this:
+    	`{ x: [0, 10], y: [-10, 10] }`
+    	@param {Array} data A flat array of objects.
+    	@param {{x?: Function, y?: Function, z?: Function, r?: Function}} fields An object containing `x`, `y`, `r` or `z` keys that equal an accessor function. If an accessor function returns an array of values, each value will also be evaluated.
+    	@returns {{x?: [min: Number, max: Number]|[min: String, max: String], y?: [min: Number, max: Number]|[min: String, max: String], z?: [min: Number, max: Number]|[min: String, max: String], r?: [min: Number, max: Number]|[min: String, max: String]}} An object with the same structure as `fields` but instead of an accessor, each key contains an array of a min and a max.
+    */
+    function calcExtents (data, fields) {
+    	if (!Array.isArray(data)) {
+    		throw new TypeError(`The first argument of calcExtents() must be an array. You passed in a ${typeof data}. If you got this error using the <LayerCake> component, consider passing a flat array to the \`flatData\` prop. More info: https://layercake.graphics/guide/#flatdata`);
+    	}
+
+    	if (
+    		Array.isArray(fields)
+    		|| fields === undefined
+    		|| fields === null
+    	) {
+    		throw new TypeError('The second argument of calcExtents() must be an '
+    		+ 'object with field names as keys as accessor functions as values.');
+    	}
+
+    	const extents = {};
+
+    	const keys = Object.keys(fields);
+    	const kl = keys.length;
+    	let i;
+    	let j;
+    	let k;
+    	let s;
+    	let min;
+    	let max;
+    	let acc;
+    	let val;
+
+    	const dl = data.length;
+    	for (i = 0; i < kl; i += 1) {
+    		s = keys[i];
+    		acc = fields[s];
+    		min = null;
+    		max = null;
+    		for (j = 0; j < dl; j += 1) {
+    			val = acc(data[j]);
+    			if (Array.isArray(val)) {
+    				const vl = val.length;
+    				for (k = 0; k < vl; k += 1) {
+    					if (val[k] !== false && val[k] !== undefined && val[k] !== null && Number.isNaN(val[k]) === false) {
+    						if (min === null || val[k] < min) {
+    							min = val[k];
+    						}
+    						if (max === null || val[k] > max) {
+    							max = val[k];
+    						}
+    					}
+    				}
+    			} else if (val !== false && val !== undefined && val !== null && Number.isNaN(val) === false) {
+    				if (min === null || val < min) {
+    					min = val;
+    				}
+    				if (max === null || val > max) {
+    					max = val;
+    				}
+    			}
+    		}
+    		extents[s] = [min, max];
+    	}
+
+    	return extents;
+    }
+
+    /**
+      Determine whether two arrays equal one another, order not important.
+    	This uses includes instead of converting to a set because this is only
+    	used internally on a small array size and it's not worth the cost
+    	of making a set
+    	@param {Array} arr1 An array to test
+    	@param {Array} arr2 An array to test against
+    	@returns {Boolean} Whether they contain all and only the same items
+     */
+    function arraysEqual(arr1, arr2) {
+    	if (arr1.length !== arr2.length) return false;
+    	return arr1.every(k => {
+    		return arr2.includes(k);
+    	});
+    }
+
+    /**
+      Determine whether a scale has an ordinal domain
+    	https://svelte.dev/repl/ec6491055208401ca41120c9c8a67737?version=3.49.0
+    	@param {Function} scale A D3 scale
+    	@returns {Boolean} Whether the scale is an ordinal scale
+     */
+    function isOrdinalDomain(scale) {
+    	// scaleBand, scalePoint
+    	// @ts-ignore
+    	if (typeof scale.bandwidth === 'function') {
+    		return true;
+    	}
+    	// scaleOrdinal
+    	if (arraysEqual(Object.keys(scale), ['domain', 'range', 'unknown', 'copy'])) {
+    		return true;
+    	}
+    	return false;
+    }
+
+    /* --------------------------------------------
+     * Figure out which of our scales are ordinal
+     * and calculate unique items for them
+     * for the others, calculate an extent
+     */
+    function calcScaleExtents (flatData, getters, activeScales) {
+    	const scaleGroups = Object.keys(activeScales).reduce((groups, k) => {
+    		const domainType = isOrdinalDomain(activeScales[k]) === true ? 'ordinal' : 'other';
+    		// @ts-ignore
+    		if (!groups[domainType]) groups[domainType] = {};
+    		groups[domainType][k] = getters[k];
+    		return groups;
+    	}, { ordinal: false, other: false});
+
+    	let extents = {};
+    	if (scaleGroups.ordinal) {
+    		// @ts-ignore
+    		extents = calcUniques(flatData, scaleGroups.ordinal);
+    	}
+    	if (scaleGroups.other) {
+    		// @ts-ignore
+    		extents = { ...extents, ...calcExtents(flatData, scaleGroups.other) };
+    	}
+
+    	return extents;
+    }
+
+    /**
+    	If we have a domain from settings (the directive), fill in
+    	any null values with ones from our measured extents
+    	otherwise, return the measured extent
+    	@param {Number[]} domain A two-value array of numbers
+    	@param {Number[]} directive A two-value array of numbers that will have any nulls filled in from the `domain` array
+    	@returns {Number[]} The filled in domain
+    */
+    function partialDomain (domain = [], directive) {
+    	if (Array.isArray(directive) === true) {
+    		return directive.map((d, i) => {
+    			if (d === null) {
+    				return domain[i];
+    			}
+    			return d;
+    		});
+    	}
+    	return domain;
+    }
+
+    function calcDomain (s) {
+    	return function domainCalc ([$extents, $domain]) {
+    		if (typeof $domain === 'function') {
+    			$domain = $domain($extents[s]);
+    		}
+    		return $extents ? partialDomain($extents[s], $domain) : $domain;
+    	};
+    }
+
+    var defaultScales = {
+    	x: linear,
+    	y: linear,
+    	z: linear,
+    	r: sqrt$1
+    };
+
+    /* --------------------------------------------
+     *
+     * Determine whether a scale is a log, symlog, power or other
+     * This is not meant to be exhaustive of all the different types of
+     * scales in d3-scale and focuses on continuous scales
+     *
+     * --------------------------------------------
+     */
+    function findScaleType(scale) {
+    	if (scale.constant) {
+    		return 'symlog';
+    	}
+    	if (scale.base) {
+    		return 'log';
+    	}
+    	if (scale.exponent) {
+    		if (scale.exponent() === 0.5) {
+    			return 'sqrt';
+    		}
+    		return 'pow';
+    	}
+    	return 'other';
+    }
+
+    /**
+    	An identity function
+    	@param {any} d The value to return.
+    	@returns {any}
+    */
+    function identity (d) {
+    	return d;
+    }
+
+    function log(sign) {
+    	return x => Math.log(sign * x);
+    }
+
+    function exp(sign) {
+    	return x => sign * Math.exp(x);
+    }
+
+    function symlog(c) {
+    	return x => Math.sign(x) * Math.log1p(Math.abs(x / c));
+    }
+
+    function symexp(c) {
+    	return x => Math.sign(x) * Math.expm1(Math.abs(x)) * c;
+    }
+
+    function pow(exponent) {
+    	return function powFn(x) {
+    		return x < 0 ? -Math.pow(-x, exponent) : Math.pow(x, exponent);
+    	};
+    }
+
+    function getPadFunctions(scale) {
+    	const scaleType = findScaleType(scale);
+
+    	if (scaleType === 'log') {
+    		const sign = Math.sign(scale.domain()[0]);
+    		return { lift: log(sign), ground: exp(sign), scaleType };
+    	}
+    	if (scaleType === 'pow') {
+    		const exponent = 1;
+    		return { lift: pow(exponent), ground: pow(1 / exponent), scaleType };
+    	}
+    	if (scaleType === 'sqrt') {
+    		const exponent = 0.5;
+    		return { lift: pow(exponent), ground: pow(1 / exponent), scaleType };
+    	}
+    	if (scaleType === 'symlog') {
+    		const constant = 1;
+    		return { lift: symlog(constant), ground: symexp(constant), scaleType };
+    	}
+
+    	return { lift: identity, ground: identity, scaleType };
+    }
+
+    function toTitleCase(str) {
+    	return str.replace(/^\w/, d => d.toUpperCase())
+    }
+
+    function f(name, modifier = '') {
+    	return `scale${toTitleCase(modifier)}${toTitleCase(name)}`;
+    }
+
+    /**
+      Get a D3 scale name
+    	https://svelte.dev/repl/ec6491055208401ca41120c9c8a67737?version=3.49.0
+    	@param {Function} scale A D3 scale
+    	@returns {String} The scale's name
+     */
+    function findScaleName(scale) {
+    	/**
+    	 * Ordinal scales
+    	 */
+    	// scaleBand, scalePoint
+    	// @ts-ignore
+    	if (typeof scale.bandwidth === 'function') {
+    		// @ts-ignore
+    		if (typeof scale.paddingInner === 'function') {
+    			return f('band');
+    		}
+    		return f('point');
+    	}
+    	// scaleOrdinal
+    	if (arraysEqual(Object.keys(scale), ['domain', 'range', 'unknown', 'copy'])) {
+    		return f('ordinal');
+    	}
+
+    	/**
+    	 * Sequential versus divergin
+    	 */
+    	let modifier = '';
+    	// @ts-ignore
+    	if (scale.interpolator) {
+    		// @ts-ignore
+    		if (scale.domain().length === 3) {
+    			modifier = 'diverging';
+    		} else {
+    			modifier = 'sequential';
+    		}
+    	}
+
+    	/**
+    	 * Continuous scales
+    	 */
+    	// @ts-ignore
+    	if (scale.quantiles) {
+    		return f('quantile', modifier);
+    	}
+    	// @ts-ignore
+    	if (scale.thresholds) {
+    		return f('quantize', modifier);
+    	}
+    	// @ts-ignore
+    	if (scale.constant) {
+    		return f('symlog', modifier);
+    	}
+    	// @ts-ignore
+    	if (scale.base) {
+    		return f('log', modifier);
+    	}
+    	// @ts-ignore
+    	if (scale.exponent) {
+    		// @ts-ignore
+    		if (scale.exponent() === 0.5) {
+    			return f('sqrt', modifier);
+    		}
+    		return f('pow', modifier);
+    	}
+
+    	if (arraysEqual(Object.keys(scale), ['domain', 'range', 'invertExtent', 'unknown', 'copy'])) {
+    		return f('threshold');
+    	}
+
+    	if (arraysEqual(Object.keys(scale), ['invert', 'range', 'domain', 'unknown', 'copy', 'ticks', 'tickFormat', 'nice'])) {
+    		return f('identity');
+    	}
+
+    	if (
+    		arraysEqual(Object.keys(scale), [
+    			'invert', 'domain', 'range', 'rangeRound', 'round', 'clamp', 'unknown', 'copy', 'ticks', 'tickFormat', 'nice'
+    		])
+    	) {
+    		return f('radial');
+    	}
+
+    	if (modifier) {
+    		return f(modifier);
+    	}
+
+    	/**
+    	 * Test for scaleTime vs scaleUtc
+    	 * https://github.com/d3/d3-scale/pull/274#issuecomment-1462935595
+    	 */
+    	// @ts-ignore
+    	if (scale.domain()[0] instanceof Date) {
+    		const d = new Date;
+    		let s;
+    		// @ts-ignore
+    		d.getDay = () => s = 'time';
+    		// @ts-ignore
+    		d.getUTCDay = () => s = 'utc';
+
+    		// @ts-ignore
+    		scale.tickFormat(0, '%a')(d);
+    		return f(s);
+    	}
+
+    	return f('linear');
+    }
+
+    /**
+    	Returns a modified scale domain by in/decreasing
+    	the min/max by taking the desired difference
+    	in pixels and converting it to units of data.
+    	Returns an array that you can set as the new domain.
+    	Padding contributed by @veltman.
+    	See here for discussion of transforms: https://github.com/d3/d3-scale/issues/150
+    	@param {Function} scale A D3 scale funcion
+    	@param {Number[]} padding A two-value array of numbers specifying padding in pixels
+    	@returns {Number[]} The padded domain
+    */
+
+    // These scales have a discrete range so they can't be padded
+    const unpaddable = ['scaleThreshold', 'scaleQuantile', 'scaleQuantize', 'scaleSequentialQuantile'];
+
+    function padScale (scale, padding) {
+    	if (typeof scale.range !== 'function') {
+    		console.log(scale);
+    		throw new Error('Scale method `range` must be a function');
+    	}
+    	if (typeof scale.domain !== 'function') {
+    		throw new Error('Scale method `domain` must be a function');
+    	}
+
+    	if (!Array.isArray(padding) || unpaddable.includes(findScaleName(scale))) {
+    		return scale.domain();
+    	}
+
+    	if (isOrdinalDomain(scale) === true) {
+    		return scale.domain();
+    	}
+
+    	const { lift, ground } = getPadFunctions(scale);
+
+    	const d0 = scale.domain()[0];
+
+    	const isTime = Object.prototype.toString.call(d0) === '[object Date]';
+
+    	const [d1, d2] = scale.domain().map(d => {
+    		return isTime ? lift(d.getTime()) : lift(d);
+    	});
+    	const [r1, r2] = scale.range();
+    	const paddingLeft = padding[0] || 0;
+    	const paddingRight = padding[1] || 0;
+
+    	const step = (d2 - d1) / (Math.abs(r2 - r1) - paddingLeft - paddingRight); // Math.abs() to properly handle reversed scales
+
+    	return [d1 - paddingLeft * step, paddingRight * step + d2].map(d => {
+    		return isTime ? ground(new Date(d)) : ground(d);
+    	});
+    }
+
+    /* eslint-disable no-nested-ternary */
+    function calcBaseRange(s, width, height, reverse, percentRange) {
+    	let min;
+    	let max;
+    	if (percentRange === true) {
+    		min = 0;
+    		max = 100;
+    	} else {
+    		min = s === 'r' ? 1 : 0;
+    		max = s === 'y' ? height : s === 'r' ? 25 : width;
+    	}
+    	return reverse === true ? [max, min] : [min, max];
+    }
+
+    function getDefaultRange(s, width, height, reverse, range, percentRange) {
+    	return !range
+    		? calcBaseRange(s, width, height, reverse, percentRange)
+    		: typeof range === 'function'
+    			? range({ width, height })
+    			: range;
+    }
+
+    function createScale (s) {
+    	return function scaleCreator ([$scale, $extents, $domain, $padding, $nice, $reverse, $width, $height, $range, $percentScale]) {
+    		if ($extents === null) {
+    			return null;
+    		}
+
+    		const defaultRange = getDefaultRange(s, $width, $height, $reverse, $range, $percentScale);
+
+    		const scale = $scale === defaultScales[s] ? $scale() : $scale.copy();
+
+    		/* --------------------------------------------
+    		 * Set the domain
+    		 */
+    		scale.domain($domain);
+
+    		/* --------------------------------------------
+    		 * Set the range of the scale to our default if
+    		 * the scale doesn't have an interpolator function
+    		 * or if it does, still set the range if that function
+    		 * is the default identity function
+    		 */
+    		if (
+    			!scale.interpolator ||
+    			(
+    				typeof scale.interpolator === 'function'
+    				&& scale.interpolator().name.startsWith('identity')
+    			)
+    		) {
+    			scale.range(defaultRange);
+    		}
+
+    		if ($padding) {
+    			scale.domain(padScale(scale, $padding));
+    		}
+
+    		if ($nice === true || typeof $nice === 'number') {
+    			if (typeof scale.nice === 'function') {
+    				scale.nice(typeof $nice === 'number' ? $nice : undefined);
+    			} else {
+    				console.error(`[Layer Cake] You set \`${s}Nice: true\` but the ${s}Scale does not have a \`.nice\` method. Ignoring...`);
+    			}
+    		}
+
+    		return scale;
+    	};
+    }
+
+    function createGetter ([$acc, $scale]) {
+    	return d => {
+    		const val = $acc(d);
+    		if (Array.isArray(val)) {
+    			return val.map(v => $scale(v));
+    		}
+    		return $scale(val);
+    	};
+    }
+
+    function getRange([$scale]) {
+    	if (typeof $scale === 'function') {
+    		if (typeof $scale.range === 'function') {
+    			return $scale.range();
+    		}
+    		console.error('[LayerCake] Your scale doesn\'t have a `.range` method?');
+    	}
+    	return null;
+    }
+
+    const indent = '    ';
+
+    function getRgb(clr){
+    	const { r, g, b, opacity: o } = rgb(clr);
+    	if (![r, g, b].every(c => c >= 0 && c <= 255)) {
+    		return false;
+    	}
+    	return { r, g, b, o };
+    }
+
+    /**
+     * Calculate human-perceived lightness from RGB
+     * This doesn't take opacity into account
+     * https://stackoverflow.com/a/596243
+     */
+    function contrast({ r, g, b }) {
+    	const luminance = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+    	return luminance > 0.6 ? 'black' : 'white';
+    }
+
+    /* --------------------------------------------
+     *
+     * Print out the values of an object
+     * --------------------------------------------
+     */
+    function printDebug(obj) {
+    	console.log('/********* LayerCake Debug ************/');
+    	console.log('Bounding box:');
+    	printObject(obj.boundingBox);
+    	console.log('Scales:\n');
+    	Object.keys(obj.activeGetters).forEach(g => {
+    		printScale(g, obj[`${g}Scale`], obj[g]);
+    	});
+    	console.log('/************ End LayerCake Debug ***************/\n');
+    }
+
+    function printObject(obj) {
+    	Object.entries(obj).forEach(([key, value]) => {
+    		console.log(`${indent}${key}:`, value);
+    	});
+    }
+
+    function printScale(s, scale, acc) {
+    	const scaleName = findScaleName(scale);
+    	console.log(`${indent}${s}:`);
+    	console.log(`${indent}${indent}Accessor: "${acc.toString()}"`);
+    	console.log(`${indent}${indent}Type: ${scaleName}`);
+    	printValues(scale, 'domain');
+    	printValues(scale, 'range', ' ');
+    }
+
+    function printValues(scale, method, extraSpace = '') {
+    	const values = scale[method]();
+    	const colorValues = colorizeArray(values);
+    	if (colorValues) {
+    		printColorArray(colorValues, method, values);
+    	} else {
+    		console.log(`${indent}${indent}${toTitleCase(method)}:${extraSpace}`, values);
+    	}
+    }
+
+    function printColorArray(colorValues, method, values) {
+    	console.log(
+    		`${indent}${indent}${toTitleCase(method)}:    %cArray%c(${values.length}) ` + colorValues[0] + '%c ]',
+    		'color: #1377e4',
+    		'color: #737373',
+    		'color: #1478e4',
+    		...colorValues[1],
+    		'color: #1478e4'
+    	);
+    }
+    function colorizeArray(arr) {
+    	const colors = [];
+    	const a = arr.map((d, i) => {
+    		const rgbo = getRgb(d);
+    		if (rgbo !== false) {
+    			colors.push(rgbo);
+    			// Add a space to the last item
+    			const space = i === arr.length - 1 ? ' ' : '';
+    			return `%c ${d}${space}`;
+    		}
+    		return d;
+    	});
+    	if (colors.length) {
+    		return [
+    			`%c[ ${a.join(', ')}`,
+    			colors.map(
+    				d => `background-color: rgba(${d.r}, ${d.g}, ${d.b}, ${d.o}); color:${contrast(d)};`
+    			)
+    		];
+    	}
+    	return null;
+    }
+
+    /* node_modules/layercake/dist/LayerCake.svelte generated by Svelte v3.58.0 */
+
+    const { Object: Object_1$1, console: console_1$2 } = globals;
+    const file$8 = "node_modules/layercake/dist/LayerCake.svelte";
+
+    const get_default_slot_changes$1 = dirty => ({
+    	element: dirty[0] & /*element*/ 4,
+    	width: dirty[1] & /*$width_d*/ 8,
+    	height: dirty[1] & /*$height_d*/ 16,
+    	aspectRatio: dirty[1] & /*$aspectRatio_d*/ 32,
+    	containerWidth: dirty[1] & /*$_containerWidth*/ 2,
+    	containerHeight: dirty[1] & /*$_containerHeight*/ 1,
+    	activeGetters: dirty[0] & /*$activeGetters_d*/ 1024,
+    	percentRange: dirty[1] & /*$_percentRange*/ 4,
+    	x: dirty[0] & /*$_x*/ 268435456,
+    	y: dirty[0] & /*$_y*/ 134217728,
+    	z: dirty[0] & /*$_z*/ 67108864,
+    	r: dirty[0] & /*$_r*/ 33554432,
+    	custom: dirty[0] & /*$_custom*/ 4096,
+    	data: dirty[0] & /*$_data*/ 1073741824,
+    	xNice: dirty[0] & /*$_xNice*/ 16777216,
+    	yNice: dirty[0] & /*$_yNice*/ 8388608,
+    	zNice: dirty[0] & /*$_zNice*/ 4194304,
+    	rNice: dirty[0] & /*$_rNice*/ 2097152,
+    	xReverse: dirty[0] & /*$_xReverse*/ 1048576,
+    	yReverse: dirty[0] & /*$_yReverse*/ 524288,
+    	zReverse: dirty[0] & /*$_zReverse*/ 262144,
+    	rReverse: dirty[0] & /*$_rReverse*/ 131072,
+    	xPadding: dirty[0] & /*$_xPadding*/ 65536,
+    	yPadding: dirty[0] & /*$_yPadding*/ 32768,
+    	zPadding: dirty[0] & /*$_zPadding*/ 16384,
+    	rPadding: dirty[0] & /*$_rPadding*/ 8192,
+    	padding: dirty[1] & /*$padding_d*/ 64,
+    	flatData: dirty[0] & /*$_flatData*/ 536870912,
+    	extents: dirty[1] & /*$extents_d*/ 128,
+    	xDomain: dirty[1] & /*$xDomain_d*/ 256,
+    	yDomain: dirty[1] & /*$yDomain_d*/ 512,
+    	zDomain: dirty[1] & /*$zDomain_d*/ 1024,
+    	rDomain: dirty[1] & /*$rDomain_d*/ 2048,
+    	xRange: dirty[1] & /*$xRange_d*/ 4096,
+    	yRange: dirty[1] & /*$yRange_d*/ 8192,
+    	zRange: dirty[1] & /*$zRange_d*/ 16384,
+    	rRange: dirty[1] & /*$rRange_d*/ 32768,
+    	config: dirty[0] & /*$_config*/ 2048,
+    	xScale: dirty[0] & /*$xScale_d*/ 512,
+    	xGet: dirty[1] & /*$xGet_d*/ 65536,
+    	yScale: dirty[0] & /*$yScale_d*/ 256,
+    	yGet: dirty[1] & /*$yGet_d*/ 131072,
+    	zScale: dirty[0] & /*$zScale_d*/ 128,
+    	zGet: dirty[1] & /*$zGet_d*/ 262144,
+    	rScale: dirty[0] & /*$rScale_d*/ 64,
+    	rGet: dirty[1] & /*$rGet_d*/ 524288
+    });
+
+    const get_default_slot_context$1 = ctx => ({
+    	element: /*element*/ ctx[2],
+    	width: /*$width_d*/ ctx[34],
+    	height: /*$height_d*/ ctx[35],
+    	aspectRatio: /*$aspectRatio_d*/ ctx[36],
+    	containerWidth: /*$_containerWidth*/ ctx[32],
+    	containerHeight: /*$_containerHeight*/ ctx[31],
+    	activeGetters: /*$activeGetters_d*/ ctx[10],
+    	percentRange: /*$_percentRange*/ ctx[33],
+    	x: /*$_x*/ ctx[28],
+    	y: /*$_y*/ ctx[27],
+    	z: /*$_z*/ ctx[26],
+    	r: /*$_r*/ ctx[25],
+    	custom: /*$_custom*/ ctx[12],
+    	data: /*$_data*/ ctx[30],
+    	xNice: /*$_xNice*/ ctx[24],
+    	yNice: /*$_yNice*/ ctx[23],
+    	zNice: /*$_zNice*/ ctx[22],
+    	rNice: /*$_rNice*/ ctx[21],
+    	xReverse: /*$_xReverse*/ ctx[20],
+    	yReverse: /*$_yReverse*/ ctx[19],
+    	zReverse: /*$_zReverse*/ ctx[18],
+    	rReverse: /*$_rReverse*/ ctx[17],
+    	xPadding: /*$_xPadding*/ ctx[16],
+    	yPadding: /*$_yPadding*/ ctx[15],
+    	zPadding: /*$_zPadding*/ ctx[14],
+    	rPadding: /*$_rPadding*/ ctx[13],
+    	padding: /*$padding_d*/ ctx[37],
+    	flatData: /*$_flatData*/ ctx[29],
+    	extents: /*$extents_d*/ ctx[38],
+    	xDomain: /*$xDomain_d*/ ctx[39],
+    	yDomain: /*$yDomain_d*/ ctx[40],
+    	zDomain: /*$zDomain_d*/ ctx[41],
+    	rDomain: /*$rDomain_d*/ ctx[42],
+    	xRange: /*$xRange_d*/ ctx[43],
+    	yRange: /*$yRange_d*/ ctx[44],
+    	zRange: /*$zRange_d*/ ctx[45],
+    	rRange: /*$rRange_d*/ ctx[46],
+    	config: /*$_config*/ ctx[11],
+    	xScale: /*$xScale_d*/ ctx[9],
+    	xGet: /*$xGet_d*/ ctx[47],
+    	yScale: /*$yScale_d*/ ctx[8],
+    	yGet: /*$yGet_d*/ ctx[48],
+    	zScale: /*$zScale_d*/ ctx[7],
+    	zGet: /*$zGet_d*/ ctx[49],
+    	rScale: /*$rScale_d*/ ctx[6],
+    	rGet: /*$rGet_d*/ ctx[50]
+    });
+
+    // (473:0) {#if ssr === true || typeof window !== 'undefined'}
+    function create_if_block$3(ctx) {
+    	let div;
+    	let div_resize_listener;
+    	let current;
+    	const default_slot_template = /*#slots*/ ctx[153].default;
+    	const default_slot = create_slot(default_slot_template, ctx, /*$$scope*/ ctx[152], get_default_slot_context$1);
+
+    	const block = {
+    		c: function create() {
+    			div = element("div");
+    			if (default_slot) default_slot.c();
+    			attr_dev(div, "class", "layercake-container svelte-vhzpsp");
+    			add_render_callback(() => /*div_elementresize_handler*/ ctx[155].call(div));
+    			set_style(div, "position", /*position*/ ctx[5]);
+    			set_style(div, "top", /*position*/ ctx[5] === 'absolute' ? '0' : null);
+    			set_style(div, "right", /*position*/ ctx[5] === 'absolute' ? '0' : null);
+    			set_style(div, "bottom", /*position*/ ctx[5] === 'absolute' ? '0' : null);
+    			set_style(div, "left", /*position*/ ctx[5] === 'absolute' ? '0' : null);
+    			set_style(div, "pointer-events", /*pointerEvents*/ ctx[4] === false ? 'none' : null);
+    			add_location(div, file$8, 473, 1, 21913);
+    		},
+    		m: function mount(target, anchor) {
+    			insert_dev(target, div, anchor);
+
+    			if (default_slot) {
+    				default_slot.m(div, null);
+    			}
+
+    			/*div_binding*/ ctx[154](div);
+    			div_resize_listener = add_resize_listener(div, /*div_elementresize_handler*/ ctx[155].bind(div));
+    			current = true;
+    		},
+    		p: function update(ctx, dirty) {
+    			if (default_slot) {
+    				if (default_slot.p && (!current || dirty[0] & /*element, $activeGetters_d, $_x, $_y, $_z, $_r, $_custom, $_data, $_xNice, $_yNice, $_zNice, $_rNice, $_xReverse, $_yReverse, $_zReverse, $_rReverse, $_xPadding, $_yPadding, $_zPadding, $_rPadding, $_flatData, $_config, $xScale_d, $yScale_d, $zScale_d, $rScale_d*/ 2147483588 | dirty[1] & /*$width_d, $height_d, $aspectRatio_d, $_containerWidth, $_containerHeight, $_percentRange, $padding_d, $extents_d, $xDomain_d, $yDomain_d, $zDomain_d, $rDomain_d, $xRange_d, $yRange_d, $zRange_d, $rRange_d, $xGet_d, $yGet_d, $zGet_d, $rGet_d*/ 1048575 | dirty[4] & /*$$scope*/ 268435456)) {
+    					update_slot_base(
+    						default_slot,
+    						default_slot_template,
+    						ctx,
+    						/*$$scope*/ ctx[152],
+    						!current
+    						? get_all_dirty_from_scope(/*$$scope*/ ctx[152])
+    						: get_slot_changes(default_slot_template, /*$$scope*/ ctx[152], dirty, get_default_slot_changes$1),
+    						get_default_slot_context$1
+    					);
+    				}
+    			}
+
+    			if (dirty[0] & /*position*/ 32) {
+    				set_style(div, "position", /*position*/ ctx[5]);
+    			}
+
+    			if (dirty[0] & /*position*/ 32) {
+    				set_style(div, "top", /*position*/ ctx[5] === 'absolute' ? '0' : null);
+    			}
+
+    			if (dirty[0] & /*position*/ 32) {
+    				set_style(div, "right", /*position*/ ctx[5] === 'absolute' ? '0' : null);
+    			}
+
+    			if (dirty[0] & /*position*/ 32) {
+    				set_style(div, "bottom", /*position*/ ctx[5] === 'absolute' ? '0' : null);
+    			}
+
+    			if (dirty[0] & /*position*/ 32) {
+    				set_style(div, "left", /*position*/ ctx[5] === 'absolute' ? '0' : null);
+    			}
+
+    			if (dirty[0] & /*pointerEvents*/ 16) {
+    				set_style(div, "pointer-events", /*pointerEvents*/ ctx[4] === false ? 'none' : null);
+    			}
+    		},
+    		i: function intro(local) {
+    			if (current) return;
+    			transition_in(default_slot, local);
+    			current = true;
+    		},
+    		o: function outro(local) {
+    			transition_out(default_slot, local);
+    			current = false;
+    		},
+    		d: function destroy(detaching) {
+    			if (detaching) detach_dev(div);
+    			if (default_slot) default_slot.d(detaching);
+    			/*div_binding*/ ctx[154](null);
+    			div_resize_listener();
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_if_block$3.name,
+    		type: "if",
+    		source: "(473:0) {#if ssr === true || typeof window !== 'undefined'}",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    function create_fragment$8(ctx) {
+    	let if_block_anchor;
+    	let current;
+    	let if_block = (/*ssr*/ ctx[3] === true || typeof window !== 'undefined') && create_if_block$3(ctx);
+
+    	const block = {
+    		c: function create() {
+    			if (if_block) if_block.c();
+    			if_block_anchor = empty$3();
+    		},
+    		l: function claim(nodes) {
+    			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
+    		},
+    		m: function mount(target, anchor) {
+    			if (if_block) if_block.m(target, anchor);
+    			insert_dev(target, if_block_anchor, anchor);
+    			current = true;
+    		},
+    		p: function update(ctx, dirty) {
+    			if (/*ssr*/ ctx[3] === true || typeof window !== 'undefined') {
+    				if (if_block) {
+    					if_block.p(ctx, dirty);
+
+    					if (dirty[0] & /*ssr*/ 8) {
+    						transition_in(if_block, 1);
+    					}
+    				} else {
+    					if_block = create_if_block$3(ctx);
+    					if_block.c();
+    					transition_in(if_block, 1);
+    					if_block.m(if_block_anchor.parentNode, if_block_anchor);
+    				}
+    			} else if (if_block) {
+    				group_outros();
+
+    				transition_out(if_block, 1, 1, () => {
+    					if_block = null;
+    				});
+
+    				check_outros();
+    			}
+    		},
+    		i: function intro(local) {
+    			if (current) return;
+    			transition_in(if_block);
+    			current = true;
+    		},
+    		o: function outro(local) {
+    			transition_out(if_block);
+    			current = false;
+    		},
+    		d: function destroy(detaching) {
+    			if (if_block) if_block.d(detaching);
+    			if (detaching) detach_dev(if_block_anchor);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_fragment$8.name,
+    		type: "component",
+    		source: "",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    function instance$8($$self, $$props, $$invalidate) {
+    	let yReverseValue;
+    	let context;
+    	let $rScale_d;
+    	let $zScale_d;
+    	let $yScale_d;
+    	let $xScale_d;
+    	let $activeGetters_d;
+    	let $box_d;
+    	let $_config;
+    	let $_custom;
+    	let $_rScale;
+    	let $_zScale;
+    	let $_yScale;
+    	let $_xScale;
+    	let $_rRange;
+    	let $_zRange;
+    	let $_yRange;
+    	let $_xRange;
+    	let $_rPadding;
+    	let $_zPadding;
+    	let $_yPadding;
+    	let $_xPadding;
+    	let $_rReverse;
+    	let $_zReverse;
+    	let $_yReverse;
+    	let $_xReverse;
+    	let $_rNice;
+    	let $_zNice;
+    	let $_yNice;
+    	let $_xNice;
+    	let $_rDomain;
+    	let $_zDomain;
+    	let $_yDomain;
+    	let $_xDomain;
+    	let $_r;
+    	let $_z;
+    	let $_y;
+    	let $_x;
+    	let $_padding;
+    	let $_flatData;
+    	let $_data;
+    	let $_extents;
+    	let $_containerHeight;
+    	let $_containerWidth;
+    	let $_percentRange;
+    	let $width_d;
+    	let $height_d;
+    	let $aspectRatio_d;
+    	let $padding_d;
+    	let $extents_d;
+    	let $xDomain_d;
+    	let $yDomain_d;
+    	let $zDomain_d;
+    	let $rDomain_d;
+    	let $xRange_d;
+    	let $yRange_d;
+    	let $zRange_d;
+    	let $rRange_d;
+    	let $xGet_d;
+    	let $yGet_d;
+    	let $zGet_d;
+    	let $rGet_d;
+    	let { $$slots: slots = {}, $$scope } = $$props;
+    	validate_slots('LayerCake', slots, ['default']);
+    	const printDebug_debounced = debounce(printDebug, 200);
+    	let { ssr = false } = $$props;
+    	let { pointerEvents = true } = $$props;
+    	let { position = 'relative' } = $$props;
+    	let { percentRange = false } = $$props;
+    	let { width = undefined } = $$props;
+    	let { height = undefined } = $$props;
+    	let { containerWidth = width || 100 } = $$props;
+    	let { containerHeight = height || 100 } = $$props;
+    	let { element = undefined } = $$props;
+    	let { x = undefined } = $$props;
+    	let { y = undefined } = $$props;
+    	let { z = undefined } = $$props;
+    	let { r = undefined } = $$props;
+    	let { data = [] } = $$props;
+    	let { xDomain = undefined } = $$props;
+    	let { yDomain = undefined } = $$props;
+    	let { zDomain = undefined } = $$props;
+    	let { rDomain = undefined } = $$props;
+    	let { xNice = false } = $$props;
+    	let { yNice = false } = $$props;
+    	let { zNice = false } = $$props;
+    	let { rNice = false } = $$props;
+    	let { xPadding = undefined } = $$props;
+    	let { yPadding = undefined } = $$props;
+    	let { zPadding = undefined } = $$props;
+    	let { rPadding = undefined } = $$props;
+    	let { xScale = defaultScales.x } = $$props;
+    	let { yScale = defaultScales.y } = $$props;
+    	let { zScale = defaultScales.z } = $$props;
+    	let { rScale = defaultScales.r } = $$props;
+    	let { xRange = undefined } = $$props;
+    	let { yRange = undefined } = $$props;
+    	let { zRange = undefined } = $$props;
+    	let { rRange = undefined } = $$props;
+    	let { xReverse = false } = $$props;
+    	let { yReverse = undefined } = $$props;
+    	let { zReverse = false } = $$props;
+    	let { rReverse = false } = $$props;
+    	let { padding = {} } = $$props;
+    	let { extents = {} } = $$props;
+    	let { flatData = undefined } = $$props;
+    	let { custom = {} } = $$props;
+    	let { debug = false } = $$props;
+
+    	/* --------------------------------------------
+     * Keep track of whether the component has mounted
+     * This is used to emit warnings once we have measured
+     * the container object and it doesn't have proper dimensions
+     */
+    	let isMounted = false;
+
+    	onMount(() => {
+    		isMounted = true;
+    	});
+
+    	/* --------------------------------------------
+     * Preserve a copy of our passed in settings before we modify them
+     * Return this to the user's context so they can reference things if need be
+     * Add the active keys since those aren't on our settings object.
+     * This is mostly an escape-hatch
+     */
+    	const config = {};
+
+    	/* --------------------------------------------
+     * Make store versions of each parameter
+     * Prefix these with `_` to keep things organized
+     */
+    	const _percentRange = writable(percentRange);
+
+    	validate_store(_percentRange, '_percentRange');
+    	component_subscribe($$self, _percentRange, value => $$invalidate(33, $_percentRange = value));
+    	const _containerWidth = writable(containerWidth);
+    	validate_store(_containerWidth, '_containerWidth');
+    	component_subscribe($$self, _containerWidth, value => $$invalidate(32, $_containerWidth = value));
+    	const _containerHeight = writable(containerHeight);
+    	validate_store(_containerHeight, '_containerHeight');
+    	component_subscribe($$self, _containerHeight, value => $$invalidate(31, $_containerHeight = value));
+    	const _extents = writable(filterObject(extents));
+    	validate_store(_extents, '_extents');
+    	component_subscribe($$self, _extents, value => $$invalidate(170, $_extents = value));
+    	const _data = writable(data);
+    	validate_store(_data, '_data');
+    	component_subscribe($$self, _data, value => $$invalidate(30, $_data = value));
+    	const _flatData = writable(flatData || data);
+    	validate_store(_flatData, '_flatData');
+    	component_subscribe($$self, _flatData, value => $$invalidate(29, $_flatData = value));
+    	const _padding = writable(padding);
+    	validate_store(_padding, '_padding');
+    	component_subscribe($$self, _padding, value => $$invalidate(169, $_padding = value));
+    	const _x = writable(makeAccessor(x));
+    	validate_store(_x, '_x');
+    	component_subscribe($$self, _x, value => $$invalidate(28, $_x = value));
+    	const _y = writable(makeAccessor(y));
+    	validate_store(_y, '_y');
+    	component_subscribe($$self, _y, value => $$invalidate(27, $_y = value));
+    	const _z = writable(makeAccessor(z));
+    	validate_store(_z, '_z');
+    	component_subscribe($$self, _z, value => $$invalidate(26, $_z = value));
+    	const _r = writable(makeAccessor(r));
+    	validate_store(_r, '_r');
+    	component_subscribe($$self, _r, value => $$invalidate(25, $_r = value));
+    	const _xDomain = writable(xDomain);
+    	validate_store(_xDomain, '_xDomain');
+    	component_subscribe($$self, _xDomain, value => $$invalidate(168, $_xDomain = value));
+    	const _yDomain = writable(yDomain);
+    	validate_store(_yDomain, '_yDomain');
+    	component_subscribe($$self, _yDomain, value => $$invalidate(167, $_yDomain = value));
+    	const _zDomain = writable(zDomain);
+    	validate_store(_zDomain, '_zDomain');
+    	component_subscribe($$self, _zDomain, value => $$invalidate(166, $_zDomain = value));
+    	const _rDomain = writable(rDomain);
+    	validate_store(_rDomain, '_rDomain');
+    	component_subscribe($$self, _rDomain, value => $$invalidate(165, $_rDomain = value));
+    	const _xNice = writable(xNice);
+    	validate_store(_xNice, '_xNice');
+    	component_subscribe($$self, _xNice, value => $$invalidate(24, $_xNice = value));
+    	const _yNice = writable(yNice);
+    	validate_store(_yNice, '_yNice');
+    	component_subscribe($$self, _yNice, value => $$invalidate(23, $_yNice = value));
+    	const _zNice = writable(zNice);
+    	validate_store(_zNice, '_zNice');
+    	component_subscribe($$self, _zNice, value => $$invalidate(22, $_zNice = value));
+    	const _rNice = writable(rNice);
+    	validate_store(_rNice, '_rNice');
+    	component_subscribe($$self, _rNice, value => $$invalidate(21, $_rNice = value));
+    	const _xReverse = writable(xReverse);
+    	validate_store(_xReverse, '_xReverse');
+    	component_subscribe($$self, _xReverse, value => $$invalidate(20, $_xReverse = value));
+    	const _yReverse = writable(yReverseValue);
+    	validate_store(_yReverse, '_yReverse');
+    	component_subscribe($$self, _yReverse, value => $$invalidate(19, $_yReverse = value));
+    	const _zReverse = writable(zReverse);
+    	validate_store(_zReverse, '_zReverse');
+    	component_subscribe($$self, _zReverse, value => $$invalidate(18, $_zReverse = value));
+    	const _rReverse = writable(rReverse);
+    	validate_store(_rReverse, '_rReverse');
+    	component_subscribe($$self, _rReverse, value => $$invalidate(17, $_rReverse = value));
+    	const _xPadding = writable(xPadding);
+    	validate_store(_xPadding, '_xPadding');
+    	component_subscribe($$self, _xPadding, value => $$invalidate(16, $_xPadding = value));
+    	const _yPadding = writable(yPadding);
+    	validate_store(_yPadding, '_yPadding');
+    	component_subscribe($$self, _yPadding, value => $$invalidate(15, $_yPadding = value));
+    	const _zPadding = writable(zPadding);
+    	validate_store(_zPadding, '_zPadding');
+    	component_subscribe($$self, _zPadding, value => $$invalidate(14, $_zPadding = value));
+    	const _rPadding = writable(rPadding);
+    	validate_store(_rPadding, '_rPadding');
+    	component_subscribe($$self, _rPadding, value => $$invalidate(13, $_rPadding = value));
+    	const _xRange = writable(xRange);
+    	validate_store(_xRange, '_xRange');
+    	component_subscribe($$self, _xRange, value => $$invalidate(164, $_xRange = value));
+    	const _yRange = writable(yRange);
+    	validate_store(_yRange, '_yRange');
+    	component_subscribe($$self, _yRange, value => $$invalidate(163, $_yRange = value));
+    	const _zRange = writable(zRange);
+    	validate_store(_zRange, '_zRange');
+    	component_subscribe($$self, _zRange, value => $$invalidate(162, $_zRange = value));
+    	const _rRange = writable(rRange);
+    	validate_store(_rRange, '_rRange');
+    	component_subscribe($$self, _rRange, value => $$invalidate(161, $_rRange = value));
+    	const _xScale = writable(xScale);
+    	validate_store(_xScale, '_xScale');
+    	component_subscribe($$self, _xScale, value => $$invalidate(160, $_xScale = value));
+    	const _yScale = writable(yScale);
+    	validate_store(_yScale, '_yScale');
+    	component_subscribe($$self, _yScale, value => $$invalidate(159, $_yScale = value));
+    	const _zScale = writable(zScale);
+    	validate_store(_zScale, '_zScale');
+    	component_subscribe($$self, _zScale, value => $$invalidate(158, $_zScale = value));
+    	const _rScale = writable(rScale);
+    	validate_store(_rScale, '_rScale');
+    	component_subscribe($$self, _rScale, value => $$invalidate(157, $_rScale = value));
+    	const _config = writable(config);
+    	validate_store(_config, '_config');
+    	component_subscribe($$self, _config, value => $$invalidate(11, $_config = value));
+    	const _custom = writable(custom);
+    	validate_store(_custom, '_custom');
+    	component_subscribe($$self, _custom, value => $$invalidate(12, $_custom = value));
+
+    	/* --------------------------------------------
+     * Create derived values
+     * Suffix these with `_d`
+     */
+    	const activeGetters_d = derived([_x, _y, _z, _r], ([$x, $y, $z, $r]) => {
+    		const obj = {};
+
+    		if ($x) {
+    			obj.x = $x;
+    		}
+
+    		if ($y) {
+    			obj.y = $y;
+    		}
+
+    		if ($z) {
+    			obj.z = $z;
+    		}
+
+    		if ($r) {
+    			obj.r = $r;
+    		}
+
+    		return obj;
+    	});
+
+    	validate_store(activeGetters_d, 'activeGetters_d');
+    	component_subscribe($$self, activeGetters_d, value => $$invalidate(10, $activeGetters_d = value));
+
+    	const padding_d = derived([_padding, _containerWidth, _containerHeight], ([$padding]) => {
+    		const defaultPadding = { top: 0, right: 0, bottom: 0, left: 0 };
+    		return Object.assign(defaultPadding, $padding);
+    	});
+
+    	validate_store(padding_d, 'padding_d');
+    	component_subscribe($$self, padding_d, value => $$invalidate(37, $padding_d = value));
+
+    	const box_d = derived([_containerWidth, _containerHeight, padding_d], ([$containerWidth, $containerHeight, $padding]) => {
+    		const b = {};
+    		b.top = $padding.top;
+    		b.right = $containerWidth - $padding.right;
+    		b.bottom = $containerHeight - $padding.bottom;
+    		b.left = $padding.left;
+    		b.width = b.right - b.left;
+    		b.height = b.bottom - b.top;
+
+    		if (b.width <= 0 && isMounted === true) {
+    			console.warn('[LayerCake] Target div has zero or negative width. Did you forget to set an explicit width in CSS on the container?');
+    		}
+
+    		if (b.height <= 0 && isMounted === true) {
+    			console.warn('[LayerCake] Target div has zero or negative height. Did you forget to set an explicit height in CSS on the container?');
+    		}
+
+    		return b;
+    	});
+
+    	validate_store(box_d, 'box_d');
+    	component_subscribe($$self, box_d, value => $$invalidate(151, $box_d = value));
+
+    	const width_d = derived([box_d], ([$box]) => {
+    		return $box.width;
+    	});
+
+    	validate_store(width_d, 'width_d');
+    	component_subscribe($$self, width_d, value => $$invalidate(34, $width_d = value));
+
+    	const height_d = derived([box_d], ([$box]) => {
+    		return $box.height;
+    	});
+
+    	validate_store(height_d, 'height_d');
+    	component_subscribe($$self, height_d, value => $$invalidate(35, $height_d = value));
+
+    	/* --------------------------------------------
+     * Calculate extents by taking the extent of the data
+     * and filling that in with anything set by the user
+     * Note that this is different from an "extent" passed
+     * in as a domain, which can be a partial domain
+     */
+    	const extents_d = derived([_flatData, activeGetters_d, _extents, _xScale, _yScale, _rScale, _zScale], ([$flatData, $activeGetters, $extents, $_xScale, $_yScale, $_rScale, $_zScale]) => {
+    		const scaleLookup = {
+    			x: $_xScale,
+    			y: $_yScale,
+    			r: $_rScale,
+    			z: $_zScale
+    		};
+
+    		const getters = filterObject($activeGetters, $extents);
+    		const activeScales = Object.fromEntries(Object.keys(getters).map(k => [k, scaleLookup[k]]));
+
+    		if (Object.keys(getters).length > 0) {
+    			const calculatedExtents = calcScaleExtents($flatData, getters, activeScales);
+    			return { ...calculatedExtents, ...$extents };
+    		} else {
+    			return {};
+    		}
+    	});
+
+    	validate_store(extents_d, 'extents_d');
+    	component_subscribe($$self, extents_d, value => $$invalidate(38, $extents_d = value));
+    	const xDomain_d = derived([extents_d, _xDomain], calcDomain('x'));
+    	validate_store(xDomain_d, 'xDomain_d');
+    	component_subscribe($$self, xDomain_d, value => $$invalidate(39, $xDomain_d = value));
+    	const yDomain_d = derived([extents_d, _yDomain], calcDomain('y'));
+    	validate_store(yDomain_d, 'yDomain_d');
+    	component_subscribe($$self, yDomain_d, value => $$invalidate(40, $yDomain_d = value));
+    	const zDomain_d = derived([extents_d, _zDomain], calcDomain('z'));
+    	validate_store(zDomain_d, 'zDomain_d');
+    	component_subscribe($$self, zDomain_d, value => $$invalidate(41, $zDomain_d = value));
+    	const rDomain_d = derived([extents_d, _rDomain], calcDomain('r'));
+    	validate_store(rDomain_d, 'rDomain_d');
+    	component_subscribe($$self, rDomain_d, value => $$invalidate(42, $rDomain_d = value));
+
+    	const xScale_d = derived(
+    		[
+    			_xScale,
+    			extents_d,
+    			xDomain_d,
+    			_xPadding,
+    			_xNice,
+    			_xReverse,
+    			width_d,
+    			height_d,
+    			_xRange,
+    			_percentRange
+    		],
+    		createScale('x')
+    	);
+
+    	validate_store(xScale_d, 'xScale_d');
+    	component_subscribe($$self, xScale_d, value => $$invalidate(9, $xScale_d = value));
+    	const xGet_d = derived([_x, xScale_d], createGetter);
+    	validate_store(xGet_d, 'xGet_d');
+    	component_subscribe($$self, xGet_d, value => $$invalidate(47, $xGet_d = value));
+
+    	const yScale_d = derived(
+    		[
+    			_yScale,
+    			extents_d,
+    			yDomain_d,
+    			_yPadding,
+    			_yNice,
+    			_yReverse,
+    			width_d,
+    			height_d,
+    			_yRange,
+    			_percentRange
+    		],
+    		createScale('y')
+    	);
+
+    	validate_store(yScale_d, 'yScale_d');
+    	component_subscribe($$self, yScale_d, value => $$invalidate(8, $yScale_d = value));
+    	const yGet_d = derived([_y, yScale_d], createGetter);
+    	validate_store(yGet_d, 'yGet_d');
+    	component_subscribe($$self, yGet_d, value => $$invalidate(48, $yGet_d = value));
+
+    	const zScale_d = derived(
+    		[
+    			_zScale,
+    			extents_d,
+    			zDomain_d,
+    			_zPadding,
+    			_zNice,
+    			_zReverse,
+    			width_d,
+    			height_d,
+    			_zRange,
+    			_percentRange
+    		],
+    		createScale('z')
+    	);
+
+    	validate_store(zScale_d, 'zScale_d');
+    	component_subscribe($$self, zScale_d, value => $$invalidate(7, $zScale_d = value));
+    	const zGet_d = derived([_z, zScale_d], createGetter);
+    	validate_store(zGet_d, 'zGet_d');
+    	component_subscribe($$self, zGet_d, value => $$invalidate(49, $zGet_d = value));
+
+    	const rScale_d = derived(
+    		[
+    			_rScale,
+    			extents_d,
+    			rDomain_d,
+    			_rPadding,
+    			_rNice,
+    			_rReverse,
+    			width_d,
+    			height_d,
+    			_rRange,
+    			_percentRange
+    		],
+    		createScale('r')
+    	);
+
+    	validate_store(rScale_d, 'rScale_d');
+    	component_subscribe($$self, rScale_d, value => $$invalidate(6, $rScale_d = value));
+    	const rGet_d = derived([_r, rScale_d], createGetter);
+    	validate_store(rGet_d, 'rGet_d');
+    	component_subscribe($$self, rGet_d, value => $$invalidate(50, $rGet_d = value));
+    	const xRange_d = derived([xScale_d], getRange);
+    	validate_store(xRange_d, 'xRange_d');
+    	component_subscribe($$self, xRange_d, value => $$invalidate(43, $xRange_d = value));
+    	const yRange_d = derived([yScale_d], getRange);
+    	validate_store(yRange_d, 'yRange_d');
+    	component_subscribe($$self, yRange_d, value => $$invalidate(44, $yRange_d = value));
+    	const zRange_d = derived([zScale_d], getRange);
+    	validate_store(zRange_d, 'zRange_d');
+    	component_subscribe($$self, zRange_d, value => $$invalidate(45, $zRange_d = value));
+    	const rRange_d = derived([rScale_d], getRange);
+    	validate_store(rRange_d, 'rRange_d');
+    	component_subscribe($$self, rRange_d, value => $$invalidate(46, $rRange_d = value));
+
+    	const aspectRatio_d = derived([width_d, height_d], ([$width, $height]) => {
+    		return $width / $height;
+    	});
+
+    	validate_store(aspectRatio_d, 'aspectRatio_d');
+    	component_subscribe($$self, aspectRatio_d, value => $$invalidate(36, $aspectRatio_d = value));
+
+    	const writable_props = [
+    		'ssr',
+    		'pointerEvents',
+    		'position',
+    		'percentRange',
+    		'width',
+    		'height',
+    		'containerWidth',
+    		'containerHeight',
+    		'element',
+    		'x',
+    		'y',
+    		'z',
+    		'r',
+    		'data',
+    		'xDomain',
+    		'yDomain',
+    		'zDomain',
+    		'rDomain',
+    		'xNice',
+    		'yNice',
+    		'zNice',
+    		'rNice',
+    		'xPadding',
+    		'yPadding',
+    		'zPadding',
+    		'rPadding',
+    		'xScale',
+    		'yScale',
+    		'zScale',
+    		'rScale',
+    		'xRange',
+    		'yRange',
+    		'zRange',
+    		'rRange',
+    		'xReverse',
+    		'yReverse',
+    		'zReverse',
+    		'rReverse',
+    		'padding',
+    		'extents',
+    		'flatData',
+    		'custom',
+    		'debug'
+    	];
+
+    	Object_1$1.keys($$props).forEach(key => {
+    		if (!~writable_props.indexOf(key) && key.slice(0, 2) !== '$$' && key !== 'slot') console_1$2.warn(`<LayerCake> was created with unknown prop '${key}'`);
+    	});
+
+    	function div_binding($$value) {
+    		binding_callbacks[$$value ? 'unshift' : 'push'](() => {
+    			element = $$value;
+    			$$invalidate(2, element);
+    		});
+    	}
+
+    	function div_elementresize_handler() {
+    		containerWidth = this.clientWidth;
+    		containerHeight = this.clientHeight;
+    		$$invalidate(0, containerWidth);
+    		$$invalidate(1, containerHeight);
+    	}
+
+    	$$self.$$set = $$props => {
+    		if ('ssr' in $$props) $$invalidate(3, ssr = $$props.ssr);
+    		if ('pointerEvents' in $$props) $$invalidate(4, pointerEvents = $$props.pointerEvents);
+    		if ('position' in $$props) $$invalidate(5, position = $$props.position);
+    		if ('percentRange' in $$props) $$invalidate(111, percentRange = $$props.percentRange);
+    		if ('width' in $$props) $$invalidate(112, width = $$props.width);
+    		if ('height' in $$props) $$invalidate(113, height = $$props.height);
+    		if ('containerWidth' in $$props) $$invalidate(0, containerWidth = $$props.containerWidth);
+    		if ('containerHeight' in $$props) $$invalidate(1, containerHeight = $$props.containerHeight);
+    		if ('element' in $$props) $$invalidate(2, element = $$props.element);
+    		if ('x' in $$props) $$invalidate(114, x = $$props.x);
+    		if ('y' in $$props) $$invalidate(115, y = $$props.y);
+    		if ('z' in $$props) $$invalidate(116, z = $$props.z);
+    		if ('r' in $$props) $$invalidate(117, r = $$props.r);
+    		if ('data' in $$props) $$invalidate(118, data = $$props.data);
+    		if ('xDomain' in $$props) $$invalidate(119, xDomain = $$props.xDomain);
+    		if ('yDomain' in $$props) $$invalidate(120, yDomain = $$props.yDomain);
+    		if ('zDomain' in $$props) $$invalidate(121, zDomain = $$props.zDomain);
+    		if ('rDomain' in $$props) $$invalidate(122, rDomain = $$props.rDomain);
+    		if ('xNice' in $$props) $$invalidate(123, xNice = $$props.xNice);
+    		if ('yNice' in $$props) $$invalidate(124, yNice = $$props.yNice);
+    		if ('zNice' in $$props) $$invalidate(125, zNice = $$props.zNice);
+    		if ('rNice' in $$props) $$invalidate(126, rNice = $$props.rNice);
+    		if ('xPadding' in $$props) $$invalidate(127, xPadding = $$props.xPadding);
+    		if ('yPadding' in $$props) $$invalidate(128, yPadding = $$props.yPadding);
+    		if ('zPadding' in $$props) $$invalidate(129, zPadding = $$props.zPadding);
+    		if ('rPadding' in $$props) $$invalidate(130, rPadding = $$props.rPadding);
+    		if ('xScale' in $$props) $$invalidate(131, xScale = $$props.xScale);
+    		if ('yScale' in $$props) $$invalidate(132, yScale = $$props.yScale);
+    		if ('zScale' in $$props) $$invalidate(133, zScale = $$props.zScale);
+    		if ('rScale' in $$props) $$invalidate(134, rScale = $$props.rScale);
+    		if ('xRange' in $$props) $$invalidate(135, xRange = $$props.xRange);
+    		if ('yRange' in $$props) $$invalidate(136, yRange = $$props.yRange);
+    		if ('zRange' in $$props) $$invalidate(137, zRange = $$props.zRange);
+    		if ('rRange' in $$props) $$invalidate(138, rRange = $$props.rRange);
+    		if ('xReverse' in $$props) $$invalidate(139, xReverse = $$props.xReverse);
+    		if ('yReverse' in $$props) $$invalidate(140, yReverse = $$props.yReverse);
+    		if ('zReverse' in $$props) $$invalidate(141, zReverse = $$props.zReverse);
+    		if ('rReverse' in $$props) $$invalidate(142, rReverse = $$props.rReverse);
+    		if ('padding' in $$props) $$invalidate(143, padding = $$props.padding);
+    		if ('extents' in $$props) $$invalidate(144, extents = $$props.extents);
+    		if ('flatData' in $$props) $$invalidate(145, flatData = $$props.flatData);
+    		if ('custom' in $$props) $$invalidate(146, custom = $$props.custom);
+    		if ('debug' in $$props) $$invalidate(147, debug = $$props.debug);
+    		if ('$$scope' in $$props) $$invalidate(152, $$scope = $$props.$$scope);
+    	};
+
+    	$$self.$capture_state = () => ({
+    		setContext,
+    		onMount,
+    		writable,
+    		derived,
+    		makeAccessor,
+    		filterObject,
+    		debounce,
+    		calcScaleExtents,
+    		calcDomain,
+    		createScale,
+    		createGetter,
+    		getRange,
+    		printDebug,
+    		defaultScales,
+    		printDebug_debounced,
+    		ssr,
+    		pointerEvents,
+    		position,
+    		percentRange,
+    		width,
+    		height,
+    		containerWidth,
+    		containerHeight,
+    		element,
+    		x,
+    		y,
+    		z,
+    		r,
+    		data,
+    		xDomain,
+    		yDomain,
+    		zDomain,
+    		rDomain,
+    		xNice,
+    		yNice,
+    		zNice,
+    		rNice,
+    		xPadding,
+    		yPadding,
+    		zPadding,
+    		rPadding,
+    		xScale,
+    		yScale,
+    		zScale,
+    		rScale,
+    		xRange,
+    		yRange,
+    		zRange,
+    		rRange,
+    		xReverse,
+    		yReverse,
+    		zReverse,
+    		rReverse,
+    		padding,
+    		extents,
+    		flatData,
+    		custom,
+    		debug,
+    		isMounted,
+    		config,
+    		_percentRange,
+    		_containerWidth,
+    		_containerHeight,
+    		_extents,
+    		_data,
+    		_flatData,
+    		_padding,
+    		_x,
+    		_y,
+    		_z,
+    		_r,
+    		_xDomain,
+    		_yDomain,
+    		_zDomain,
+    		_rDomain,
+    		_xNice,
+    		_yNice,
+    		_zNice,
+    		_rNice,
+    		_xReverse,
+    		_yReverse,
+    		_zReverse,
+    		_rReverse,
+    		_xPadding,
+    		_yPadding,
+    		_zPadding,
+    		_rPadding,
+    		_xRange,
+    		_yRange,
+    		_zRange,
+    		_rRange,
+    		_xScale,
+    		_yScale,
+    		_zScale,
+    		_rScale,
+    		_config,
+    		_custom,
+    		activeGetters_d,
+    		padding_d,
+    		box_d,
+    		width_d,
+    		height_d,
+    		extents_d,
+    		xDomain_d,
+    		yDomain_d,
+    		zDomain_d,
+    		rDomain_d,
+    		xScale_d,
+    		xGet_d,
+    		yScale_d,
+    		yGet_d,
+    		zScale_d,
+    		zGet_d,
+    		rScale_d,
+    		rGet_d,
+    		xRange_d,
+    		yRange_d,
+    		zRange_d,
+    		rRange_d,
+    		aspectRatio_d,
+    		context,
+    		yReverseValue,
+    		$rScale_d,
+    		$zScale_d,
+    		$yScale_d,
+    		$xScale_d,
+    		$activeGetters_d,
+    		$box_d,
+    		$_config,
+    		$_custom,
+    		$_rScale,
+    		$_zScale,
+    		$_yScale,
+    		$_xScale,
+    		$_rRange,
+    		$_zRange,
+    		$_yRange,
+    		$_xRange,
+    		$_rPadding,
+    		$_zPadding,
+    		$_yPadding,
+    		$_xPadding,
+    		$_rReverse,
+    		$_zReverse,
+    		$_yReverse,
+    		$_xReverse,
+    		$_rNice,
+    		$_zNice,
+    		$_yNice,
+    		$_xNice,
+    		$_rDomain,
+    		$_zDomain,
+    		$_yDomain,
+    		$_xDomain,
+    		$_r,
+    		$_z,
+    		$_y,
+    		$_x,
+    		$_padding,
+    		$_flatData,
+    		$_data,
+    		$_extents,
+    		$_containerHeight,
+    		$_containerWidth,
+    		$_percentRange,
+    		$width_d,
+    		$height_d,
+    		$aspectRatio_d,
+    		$padding_d,
+    		$extents_d,
+    		$xDomain_d,
+    		$yDomain_d,
+    		$zDomain_d,
+    		$rDomain_d,
+    		$xRange_d,
+    		$yRange_d,
+    		$zRange_d,
+    		$rRange_d,
+    		$xGet_d,
+    		$yGet_d,
+    		$zGet_d,
+    		$rGet_d
+    	});
+
+    	$$self.$inject_state = $$props => {
+    		if ('ssr' in $$props) $$invalidate(3, ssr = $$props.ssr);
+    		if ('pointerEvents' in $$props) $$invalidate(4, pointerEvents = $$props.pointerEvents);
+    		if ('position' in $$props) $$invalidate(5, position = $$props.position);
+    		if ('percentRange' in $$props) $$invalidate(111, percentRange = $$props.percentRange);
+    		if ('width' in $$props) $$invalidate(112, width = $$props.width);
+    		if ('height' in $$props) $$invalidate(113, height = $$props.height);
+    		if ('containerWidth' in $$props) $$invalidate(0, containerWidth = $$props.containerWidth);
+    		if ('containerHeight' in $$props) $$invalidate(1, containerHeight = $$props.containerHeight);
+    		if ('element' in $$props) $$invalidate(2, element = $$props.element);
+    		if ('x' in $$props) $$invalidate(114, x = $$props.x);
+    		if ('y' in $$props) $$invalidate(115, y = $$props.y);
+    		if ('z' in $$props) $$invalidate(116, z = $$props.z);
+    		if ('r' in $$props) $$invalidate(117, r = $$props.r);
+    		if ('data' in $$props) $$invalidate(118, data = $$props.data);
+    		if ('xDomain' in $$props) $$invalidate(119, xDomain = $$props.xDomain);
+    		if ('yDomain' in $$props) $$invalidate(120, yDomain = $$props.yDomain);
+    		if ('zDomain' in $$props) $$invalidate(121, zDomain = $$props.zDomain);
+    		if ('rDomain' in $$props) $$invalidate(122, rDomain = $$props.rDomain);
+    		if ('xNice' in $$props) $$invalidate(123, xNice = $$props.xNice);
+    		if ('yNice' in $$props) $$invalidate(124, yNice = $$props.yNice);
+    		if ('zNice' in $$props) $$invalidate(125, zNice = $$props.zNice);
+    		if ('rNice' in $$props) $$invalidate(126, rNice = $$props.rNice);
+    		if ('xPadding' in $$props) $$invalidate(127, xPadding = $$props.xPadding);
+    		if ('yPadding' in $$props) $$invalidate(128, yPadding = $$props.yPadding);
+    		if ('zPadding' in $$props) $$invalidate(129, zPadding = $$props.zPadding);
+    		if ('rPadding' in $$props) $$invalidate(130, rPadding = $$props.rPadding);
+    		if ('xScale' in $$props) $$invalidate(131, xScale = $$props.xScale);
+    		if ('yScale' in $$props) $$invalidate(132, yScale = $$props.yScale);
+    		if ('zScale' in $$props) $$invalidate(133, zScale = $$props.zScale);
+    		if ('rScale' in $$props) $$invalidate(134, rScale = $$props.rScale);
+    		if ('xRange' in $$props) $$invalidate(135, xRange = $$props.xRange);
+    		if ('yRange' in $$props) $$invalidate(136, yRange = $$props.yRange);
+    		if ('zRange' in $$props) $$invalidate(137, zRange = $$props.zRange);
+    		if ('rRange' in $$props) $$invalidate(138, rRange = $$props.rRange);
+    		if ('xReverse' in $$props) $$invalidate(139, xReverse = $$props.xReverse);
+    		if ('yReverse' in $$props) $$invalidate(140, yReverse = $$props.yReverse);
+    		if ('zReverse' in $$props) $$invalidate(141, zReverse = $$props.zReverse);
+    		if ('rReverse' in $$props) $$invalidate(142, rReverse = $$props.rReverse);
+    		if ('padding' in $$props) $$invalidate(143, padding = $$props.padding);
+    		if ('extents' in $$props) $$invalidate(144, extents = $$props.extents);
+    		if ('flatData' in $$props) $$invalidate(145, flatData = $$props.flatData);
+    		if ('custom' in $$props) $$invalidate(146, custom = $$props.custom);
+    		if ('debug' in $$props) $$invalidate(147, debug = $$props.debug);
+    		if ('isMounted' in $$props) isMounted = $$props.isMounted;
+    		if ('context' in $$props) $$invalidate(149, context = $$props.context);
+    		if ('yReverseValue' in $$props) $$invalidate(150, yReverseValue = $$props.yReverseValue);
+    	};
+
+    	if ($$props && "$$inject" in $$props) {
+    		$$self.$inject_state($$props.$$inject);
+    	}
+
+    	$$self.$$.update = () => {
+    		if ($$self.$$.dirty[4] & /*yReverse, yScale*/ 65792) {
+    			/**
+     * Make this reactive
+     */
+    			$$invalidate(150, yReverseValue = typeof yReverse === 'undefined'
+    			? typeof yScale.bandwidth === 'function' ? false : true
+    			: yReverse);
+    		}
+
+    		if ($$self.$$.dirty[3] & /*x*/ 2097152) {
+    			if (x) $$invalidate(148, config.x = x, config);
+    		}
+
+    		if ($$self.$$.dirty[3] & /*y*/ 4194304) {
+    			if (y) $$invalidate(148, config.y = y, config);
+    		}
+
+    		if ($$self.$$.dirty[3] & /*z*/ 8388608) {
+    			if (z) $$invalidate(148, config.z = z, config);
+    		}
+
+    		if ($$self.$$.dirty[3] & /*r*/ 16777216) {
+    			if (r) $$invalidate(148, config.r = r, config);
+    		}
+
+    		if ($$self.$$.dirty[3] & /*xDomain*/ 67108864) {
+    			if (xDomain) $$invalidate(148, config.xDomain = xDomain, config);
+    		}
+
+    		if ($$self.$$.dirty[3] & /*yDomain*/ 134217728) {
+    			if (yDomain) $$invalidate(148, config.yDomain = yDomain, config);
+    		}
+
+    		if ($$self.$$.dirty[3] & /*zDomain*/ 268435456) {
+    			if (zDomain) $$invalidate(148, config.zDomain = zDomain, config);
+    		}
+
+    		if ($$self.$$.dirty[3] & /*rDomain*/ 536870912) {
+    			if (rDomain) $$invalidate(148, config.rDomain = rDomain, config);
+    		}
+
+    		if ($$self.$$.dirty[4] & /*xRange*/ 2048) {
+    			if (xRange) $$invalidate(148, config.xRange = xRange, config);
+    		}
+
+    		if ($$self.$$.dirty[4] & /*yRange*/ 4096) {
+    			if (yRange) $$invalidate(148, config.yRange = yRange, config);
+    		}
+
+    		if ($$self.$$.dirty[4] & /*zRange*/ 8192) {
+    			if (zRange) $$invalidate(148, config.zRange = zRange, config);
+    		}
+
+    		if ($$self.$$.dirty[4] & /*rRange*/ 16384) {
+    			if (rRange) $$invalidate(148, config.rRange = rRange, config);
+    		}
+
+    		if ($$self.$$.dirty[3] & /*percentRange*/ 262144) {
+    			set_store_value(_percentRange, $_percentRange = percentRange, $_percentRange);
+    		}
+
+    		if ($$self.$$.dirty[0] & /*containerWidth*/ 1) {
+    			set_store_value(_containerWidth, $_containerWidth = containerWidth, $_containerWidth);
+    		}
+
+    		if ($$self.$$.dirty[0] & /*containerHeight*/ 2) {
+    			set_store_value(_containerHeight, $_containerHeight = containerHeight, $_containerHeight);
+    		}
+
+    		if ($$self.$$.dirty[4] & /*extents*/ 1048576) {
+    			set_store_value(_extents, $_extents = filterObject(extents), $_extents);
+    		}
+
+    		if ($$self.$$.dirty[3] & /*data*/ 33554432) {
+    			set_store_value(_data, $_data = data, $_data);
+    		}
+
+    		if ($$self.$$.dirty[3] & /*data*/ 33554432 | $$self.$$.dirty[4] & /*flatData*/ 2097152) {
+    			set_store_value(_flatData, $_flatData = flatData || data, $_flatData);
+    		}
+
+    		if ($$self.$$.dirty[4] & /*padding*/ 524288) {
+    			set_store_value(_padding, $_padding = padding, $_padding);
+    		}
+
+    		if ($$self.$$.dirty[3] & /*x*/ 2097152) {
+    			set_store_value(_x, $_x = makeAccessor(x), $_x);
+    		}
+
+    		if ($$self.$$.dirty[3] & /*y*/ 4194304) {
+    			set_store_value(_y, $_y = makeAccessor(y), $_y);
+    		}
+
+    		if ($$self.$$.dirty[3] & /*z*/ 8388608) {
+    			set_store_value(_z, $_z = makeAccessor(z), $_z);
+    		}
+
+    		if ($$self.$$.dirty[3] & /*r*/ 16777216) {
+    			set_store_value(_r, $_r = makeAccessor(r), $_r);
+    		}
+
+    		if ($$self.$$.dirty[3] & /*xDomain*/ 67108864) {
+    			set_store_value(_xDomain, $_xDomain = xDomain, $_xDomain);
+    		}
+
+    		if ($$self.$$.dirty[3] & /*yDomain*/ 134217728) {
+    			set_store_value(_yDomain, $_yDomain = yDomain, $_yDomain);
+    		}
+
+    		if ($$self.$$.dirty[3] & /*zDomain*/ 268435456) {
+    			set_store_value(_zDomain, $_zDomain = zDomain, $_zDomain);
+    		}
+
+    		if ($$self.$$.dirty[3] & /*rDomain*/ 536870912) {
+    			set_store_value(_rDomain, $_rDomain = rDomain, $_rDomain);
+    		}
+
+    		if ($$self.$$.dirty[3] & /*xNice*/ 1073741824) {
+    			set_store_value(_xNice, $_xNice = xNice, $_xNice);
+    		}
+
+    		if ($$self.$$.dirty[4] & /*yNice*/ 1) {
+    			set_store_value(_yNice, $_yNice = yNice, $_yNice);
+    		}
+
+    		if ($$self.$$.dirty[4] & /*zNice*/ 2) {
+    			set_store_value(_zNice, $_zNice = zNice, $_zNice);
+    		}
+
+    		if ($$self.$$.dirty[4] & /*rNice*/ 4) {
+    			set_store_value(_rNice, $_rNice = rNice, $_rNice);
+    		}
+
+    		if ($$self.$$.dirty[4] & /*xReverse*/ 32768) {
+    			set_store_value(_xReverse, $_xReverse = xReverse, $_xReverse);
+    		}
+
+    		if ($$self.$$.dirty[4] & /*yReverseValue*/ 67108864) {
+    			set_store_value(_yReverse, $_yReverse = yReverseValue, $_yReverse);
+    		}
+
+    		if ($$self.$$.dirty[4] & /*zReverse*/ 131072) {
+    			set_store_value(_zReverse, $_zReverse = zReverse, $_zReverse);
+    		}
+
+    		if ($$self.$$.dirty[4] & /*rReverse*/ 262144) {
+    			set_store_value(_rReverse, $_rReverse = rReverse, $_rReverse);
+    		}
+
+    		if ($$self.$$.dirty[4] & /*xPadding*/ 8) {
+    			set_store_value(_xPadding, $_xPadding = xPadding, $_xPadding);
+    		}
+
+    		if ($$self.$$.dirty[4] & /*yPadding*/ 16) {
+    			set_store_value(_yPadding, $_yPadding = yPadding, $_yPadding);
+    		}
+
+    		if ($$self.$$.dirty[4] & /*zPadding*/ 32) {
+    			set_store_value(_zPadding, $_zPadding = zPadding, $_zPadding);
+    		}
+
+    		if ($$self.$$.dirty[4] & /*rPadding*/ 64) {
+    			set_store_value(_rPadding, $_rPadding = rPadding, $_rPadding);
+    		}
+
+    		if ($$self.$$.dirty[4] & /*xRange*/ 2048) {
+    			set_store_value(_xRange, $_xRange = xRange, $_xRange);
+    		}
+
+    		if ($$self.$$.dirty[4] & /*yRange*/ 4096) {
+    			set_store_value(_yRange, $_yRange = yRange, $_yRange);
+    		}
+
+    		if ($$self.$$.dirty[4] & /*zRange*/ 8192) {
+    			set_store_value(_zRange, $_zRange = zRange, $_zRange);
+    		}
+
+    		if ($$self.$$.dirty[4] & /*rRange*/ 16384) {
+    			set_store_value(_rRange, $_rRange = rRange, $_rRange);
+    		}
+
+    		if ($$self.$$.dirty[4] & /*xScale*/ 128) {
+    			set_store_value(_xScale, $_xScale = xScale, $_xScale);
+    		}
+
+    		if ($$self.$$.dirty[4] & /*yScale*/ 256) {
+    			set_store_value(_yScale, $_yScale = yScale, $_yScale);
+    		}
+
+    		if ($$self.$$.dirty[4] & /*zScale*/ 512) {
+    			set_store_value(_zScale, $_zScale = zScale, $_zScale);
+    		}
+
+    		if ($$self.$$.dirty[4] & /*rScale*/ 1024) {
+    			set_store_value(_rScale, $_rScale = rScale, $_rScale);
+    		}
+
+    		if ($$self.$$.dirty[4] & /*custom*/ 4194304) {
+    			set_store_value(_custom, $_custom = custom, $_custom);
+    		}
+
+    		if ($$self.$$.dirty[4] & /*config*/ 16777216) {
+    			set_store_value(_config, $_config = config, $_config);
+    		}
+
+    		if ($$self.$$.dirty[4] & /*context*/ 33554432) {
+    			setContext('LayerCake', context);
+    		}
+
+    		if ($$self.$$.dirty[0] & /*ssr, $activeGetters_d, $xScale_d, $yScale_d, $zScale_d, $rScale_d*/ 1992 | $$self.$$.dirty[4] & /*$box_d, debug, config*/ 159383552) {
+    			if ($box_d && debug === true && (ssr === true || typeof window !== 'undefined')) {
+    				// Call this as a debounce so that it doesn't get called multiple times as these vars get filled in
+    				printDebug_debounced({
+    					boundingBox: $box_d,
+    					activeGetters: $activeGetters_d,
+    					x: config.x,
+    					y: config.y,
+    					z: config.z,
+    					r: config.r,
+    					xScale: $xScale_d,
+    					yScale: $yScale_d,
+    					zScale: $zScale_d,
+    					rScale: $rScale_d
+    				});
+    			}
+    		}
+    	};
+
+    	$$invalidate(149, context = {
+    		activeGetters: activeGetters_d,
+    		width: width_d,
+    		height: height_d,
+    		percentRange: _percentRange,
+    		aspectRatio: aspectRatio_d,
+    		containerWidth: _containerWidth,
+    		containerHeight: _containerHeight,
+    		x: _x,
+    		y: _y,
+    		z: _z,
+    		r: _r,
+    		custom: _custom,
+    		data: _data,
+    		xNice: _xNice,
+    		yNice: _yNice,
+    		zNice: _zNice,
+    		rNice: _rNice,
+    		xReverse: _xReverse,
+    		yReverse: _yReverse,
+    		zReverse: _zReverse,
+    		rReverse: _rReverse,
+    		xPadding: _xPadding,
+    		yPadding: _yPadding,
+    		zPadding: _zPadding,
+    		rPadding: _rPadding,
+    		padding: padding_d,
+    		flatData: _flatData,
+    		extents: extents_d,
+    		xDomain: xDomain_d,
+    		yDomain: yDomain_d,
+    		zDomain: zDomain_d,
+    		rDomain: rDomain_d,
+    		xRange: xRange_d,
+    		yRange: yRange_d,
+    		zRange: zRange_d,
+    		rRange: rRange_d,
+    		config: _config,
+    		xScale: xScale_d,
+    		xGet: xGet_d,
+    		yScale: yScale_d,
+    		yGet: yGet_d,
+    		zScale: zScale_d,
+    		zGet: zGet_d,
+    		rScale: rScale_d,
+    		rGet: rGet_d
+    	});
+
+    	return [
+    		containerWidth,
+    		containerHeight,
+    		element,
+    		ssr,
+    		pointerEvents,
+    		position,
+    		$rScale_d,
+    		$zScale_d,
+    		$yScale_d,
+    		$xScale_d,
+    		$activeGetters_d,
+    		$_config,
+    		$_custom,
+    		$_rPadding,
+    		$_zPadding,
+    		$_yPadding,
+    		$_xPadding,
+    		$_rReverse,
+    		$_zReverse,
+    		$_yReverse,
+    		$_xReverse,
+    		$_rNice,
+    		$_zNice,
+    		$_yNice,
+    		$_xNice,
+    		$_r,
+    		$_z,
+    		$_y,
+    		$_x,
+    		$_flatData,
+    		$_data,
+    		$_containerHeight,
+    		$_containerWidth,
+    		$_percentRange,
+    		$width_d,
+    		$height_d,
+    		$aspectRatio_d,
+    		$padding_d,
+    		$extents_d,
+    		$xDomain_d,
+    		$yDomain_d,
+    		$zDomain_d,
+    		$rDomain_d,
+    		$xRange_d,
+    		$yRange_d,
+    		$zRange_d,
+    		$rRange_d,
+    		$xGet_d,
+    		$yGet_d,
+    		$zGet_d,
+    		$rGet_d,
+    		_percentRange,
+    		_containerWidth,
+    		_containerHeight,
+    		_extents,
+    		_data,
+    		_flatData,
+    		_padding,
+    		_x,
+    		_y,
+    		_z,
+    		_r,
+    		_xDomain,
+    		_yDomain,
+    		_zDomain,
+    		_rDomain,
+    		_xNice,
+    		_yNice,
+    		_zNice,
+    		_rNice,
+    		_xReverse,
+    		_yReverse,
+    		_zReverse,
+    		_rReverse,
+    		_xPadding,
+    		_yPadding,
+    		_zPadding,
+    		_rPadding,
+    		_xRange,
+    		_yRange,
+    		_zRange,
+    		_rRange,
+    		_xScale,
+    		_yScale,
+    		_zScale,
+    		_rScale,
+    		_config,
+    		_custom,
+    		activeGetters_d,
+    		padding_d,
+    		box_d,
+    		width_d,
+    		height_d,
+    		extents_d,
+    		xDomain_d,
+    		yDomain_d,
+    		zDomain_d,
+    		rDomain_d,
+    		xScale_d,
+    		xGet_d,
+    		yScale_d,
+    		yGet_d,
+    		zScale_d,
+    		zGet_d,
+    		rScale_d,
+    		rGet_d,
+    		xRange_d,
+    		yRange_d,
+    		zRange_d,
+    		rRange_d,
+    		aspectRatio_d,
+    		percentRange,
+    		width,
+    		height,
+    		x,
+    		y,
+    		z,
+    		r,
+    		data,
+    		xDomain,
+    		yDomain,
+    		zDomain,
+    		rDomain,
+    		xNice,
+    		yNice,
+    		zNice,
+    		rNice,
+    		xPadding,
+    		yPadding,
+    		zPadding,
+    		rPadding,
+    		xScale,
+    		yScale,
+    		zScale,
+    		rScale,
+    		xRange,
+    		yRange,
+    		zRange,
+    		rRange,
+    		xReverse,
+    		yReverse,
+    		zReverse,
+    		rReverse,
+    		padding,
+    		extents,
+    		flatData,
+    		custom,
+    		debug,
+    		config,
+    		context,
+    		yReverseValue,
+    		$box_d,
+    		$$scope,
+    		slots,
+    		div_binding,
+    		div_elementresize_handler
+    	];
+    }
+
+    class LayerCake extends SvelteComponentDev {
+    	constructor(options) {
+    		super(options);
+
+    		init$1(
+    			this,
+    			options,
+    			instance$8,
+    			create_fragment$8,
+    			safe_not_equal,
+    			{
+    				ssr: 3,
+    				pointerEvents: 4,
+    				position: 5,
+    				percentRange: 111,
+    				width: 112,
+    				height: 113,
+    				containerWidth: 0,
+    				containerHeight: 1,
+    				element: 2,
+    				x: 114,
+    				y: 115,
+    				z: 116,
+    				r: 117,
+    				data: 118,
+    				xDomain: 119,
+    				yDomain: 120,
+    				zDomain: 121,
+    				rDomain: 122,
+    				xNice: 123,
+    				yNice: 124,
+    				zNice: 125,
+    				rNice: 126,
+    				xPadding: 127,
+    				yPadding: 128,
+    				zPadding: 129,
+    				rPadding: 130,
+    				xScale: 131,
+    				yScale: 132,
+    				zScale: 133,
+    				rScale: 134,
+    				xRange: 135,
+    				yRange: 136,
+    				zRange: 137,
+    				rRange: 138,
+    				xReverse: 139,
+    				yReverse: 140,
+    				zReverse: 141,
+    				rReverse: 142,
+    				padding: 143,
+    				extents: 144,
+    				flatData: 145,
+    				custom: 146,
+    				debug: 147
+    			},
+    			null,
+    			[-1, -1, -1, -1, -1, -1]
+    		);
+
+    		dispatch_dev("SvelteRegisterComponent", {
+    			component: this,
+    			tagName: "LayerCake",
+    			options,
+    			id: create_fragment$8.name
+    		});
+    	}
+
+    	get ssr() {
+    		throw new Error("<LayerCake>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set ssr(value) {
+    		throw new Error("<LayerCake>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	get pointerEvents() {
+    		throw new Error("<LayerCake>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set pointerEvents(value) {
+    		throw new Error("<LayerCake>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	get position() {
+    		throw new Error("<LayerCake>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set position(value) {
+    		throw new Error("<LayerCake>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	get percentRange() {
+    		throw new Error("<LayerCake>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set percentRange(value) {
+    		throw new Error("<LayerCake>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	get width() {
+    		throw new Error("<LayerCake>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set width(value) {
+    		throw new Error("<LayerCake>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	get height() {
+    		throw new Error("<LayerCake>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set height(value) {
+    		throw new Error("<LayerCake>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	get containerWidth() {
+    		throw new Error("<LayerCake>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set containerWidth(value) {
+    		throw new Error("<LayerCake>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	get containerHeight() {
+    		throw new Error("<LayerCake>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set containerHeight(value) {
+    		throw new Error("<LayerCake>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	get element() {
+    		throw new Error("<LayerCake>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set element(value) {
+    		throw new Error("<LayerCake>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	get x() {
+    		throw new Error("<LayerCake>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set x(value) {
+    		throw new Error("<LayerCake>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	get y() {
+    		throw new Error("<LayerCake>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set y(value) {
+    		throw new Error("<LayerCake>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	get z() {
+    		throw new Error("<LayerCake>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set z(value) {
+    		throw new Error("<LayerCake>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	get r() {
+    		throw new Error("<LayerCake>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set r(value) {
+    		throw new Error("<LayerCake>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	get data() {
+    		throw new Error("<LayerCake>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set data(value) {
+    		throw new Error("<LayerCake>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	get xDomain() {
+    		throw new Error("<LayerCake>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set xDomain(value) {
+    		throw new Error("<LayerCake>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	get yDomain() {
+    		throw new Error("<LayerCake>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set yDomain(value) {
+    		throw new Error("<LayerCake>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	get zDomain() {
+    		throw new Error("<LayerCake>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set zDomain(value) {
+    		throw new Error("<LayerCake>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	get rDomain() {
+    		throw new Error("<LayerCake>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set rDomain(value) {
+    		throw new Error("<LayerCake>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	get xNice() {
+    		throw new Error("<LayerCake>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set xNice(value) {
+    		throw new Error("<LayerCake>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	get yNice() {
+    		throw new Error("<LayerCake>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set yNice(value) {
+    		throw new Error("<LayerCake>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	get zNice() {
+    		throw new Error("<LayerCake>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set zNice(value) {
+    		throw new Error("<LayerCake>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	get rNice() {
+    		throw new Error("<LayerCake>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set rNice(value) {
+    		throw new Error("<LayerCake>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	get xPadding() {
+    		throw new Error("<LayerCake>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set xPadding(value) {
+    		throw new Error("<LayerCake>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	get yPadding() {
+    		throw new Error("<LayerCake>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set yPadding(value) {
+    		throw new Error("<LayerCake>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	get zPadding() {
+    		throw new Error("<LayerCake>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set zPadding(value) {
+    		throw new Error("<LayerCake>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	get rPadding() {
+    		throw new Error("<LayerCake>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set rPadding(value) {
+    		throw new Error("<LayerCake>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	get xScale() {
+    		throw new Error("<LayerCake>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set xScale(value) {
+    		throw new Error("<LayerCake>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	get yScale() {
+    		throw new Error("<LayerCake>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set yScale(value) {
+    		throw new Error("<LayerCake>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	get zScale() {
+    		throw new Error("<LayerCake>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set zScale(value) {
+    		throw new Error("<LayerCake>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	get rScale() {
+    		throw new Error("<LayerCake>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set rScale(value) {
+    		throw new Error("<LayerCake>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	get xRange() {
+    		throw new Error("<LayerCake>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set xRange(value) {
+    		throw new Error("<LayerCake>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	get yRange() {
+    		throw new Error("<LayerCake>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set yRange(value) {
+    		throw new Error("<LayerCake>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	get zRange() {
+    		throw new Error("<LayerCake>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set zRange(value) {
+    		throw new Error("<LayerCake>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	get rRange() {
+    		throw new Error("<LayerCake>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set rRange(value) {
+    		throw new Error("<LayerCake>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	get xReverse() {
+    		throw new Error("<LayerCake>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set xReverse(value) {
+    		throw new Error("<LayerCake>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	get yReverse() {
+    		throw new Error("<LayerCake>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set yReverse(value) {
+    		throw new Error("<LayerCake>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	get zReverse() {
+    		throw new Error("<LayerCake>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set zReverse(value) {
+    		throw new Error("<LayerCake>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	get rReverse() {
+    		throw new Error("<LayerCake>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set rReverse(value) {
+    		throw new Error("<LayerCake>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	get padding() {
+    		throw new Error("<LayerCake>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set padding(value) {
+    		throw new Error("<LayerCake>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	get extents() {
+    		throw new Error("<LayerCake>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set extents(value) {
+    		throw new Error("<LayerCake>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	get flatData() {
+    		throw new Error("<LayerCake>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set flatData(value) {
+    		throw new Error("<LayerCake>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	get custom() {
+    		throw new Error("<LayerCake>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set custom(value) {
+    		throw new Error("<LayerCake>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	get debug() {
+    		throw new Error("<LayerCake>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set debug(value) {
+    		throw new Error("<LayerCake>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+    }
+
+    /* node_modules/layercake/dist/layouts/Svg.svelte generated by Svelte v3.58.0 */
+    const file$7 = "node_modules/layercake/dist/layouts/Svg.svelte";
+    const get_default_slot_changes = dirty => ({ element: dirty & /*element*/ 1 });
+    const get_default_slot_context = ctx => ({ element: /*element*/ ctx[0] });
+    const get_defs_slot_changes = dirty => ({ element: dirty & /*element*/ 1 });
+    const get_defs_slot_context = ctx => ({ element: /*element*/ ctx[0] });
+
+    function create_fragment$7(ctx) {
+    	let svg;
+    	let defs;
+    	let g;
+    	let g_transform_value;
+    	let current;
+    	const defs_slot_template = /*#slots*/ ctx[12].defs;
+    	const defs_slot = create_slot(defs_slot_template, ctx, /*$$scope*/ ctx[11], get_defs_slot_context);
+    	const default_slot_template = /*#slots*/ ctx[12].default;
+    	const default_slot = create_slot(default_slot_template, ctx, /*$$scope*/ ctx[11], get_default_slot_context);
+
+    	const block = {
+    		c: function create() {
+    			svg = svg_element("svg");
+    			defs = svg_element("defs");
+    			if (defs_slot) defs_slot.c();
+    			g = svg_element("g");
+    			if (default_slot) default_slot.c();
+    			add_location(defs, file$7, 33, 1, 992);
+    			attr_dev(g, "class", "layercake-layout-svg_g");
+    			attr_dev(g, "transform", g_transform_value = "translate(" + /*$padding*/ ctx[7].left + ", " + /*$padding*/ ctx[7].top + ")");
+    			add_location(g, file$7, 36, 1, 1037);
+    			attr_dev(svg, "class", "layercake-layout-svg svelte-u84d8d");
+    			attr_dev(svg, "viewBox", /*viewBox*/ ctx[4]);
+    			attr_dev(svg, "width", /*$containerWidth*/ ctx[5]);
+    			attr_dev(svg, "height", /*$containerHeight*/ ctx[6]);
+    			set_style(svg, "z-index", /*zIndex*/ ctx[2]);
+    			set_style(svg, "pointer-events", /*pointerEvents*/ ctx[3] === false ? 'none' : null);
+    			add_location(svg, file$7, 24, 0, 782);
+    		},
+    		l: function claim(nodes) {
+    			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
+    		},
+    		m: function mount(target, anchor) {
+    			insert_dev(target, svg, anchor);
+    			append_dev(svg, defs);
+
+    			if (defs_slot) {
+    				defs_slot.m(defs, null);
+    			}
+
+    			append_dev(svg, g);
+
+    			if (default_slot) {
+    				default_slot.m(g, null);
+    			}
+
+    			/*g_binding*/ ctx[13](g);
+    			/*svg_binding*/ ctx[14](svg);
+    			current = true;
+    		},
+    		p: function update(ctx, [dirty]) {
+    			if (defs_slot) {
+    				if (defs_slot.p && (!current || dirty & /*$$scope, element*/ 2049)) {
+    					update_slot_base(
+    						defs_slot,
+    						defs_slot_template,
+    						ctx,
+    						/*$$scope*/ ctx[11],
+    						!current
+    						? get_all_dirty_from_scope(/*$$scope*/ ctx[11])
+    						: get_slot_changes(defs_slot_template, /*$$scope*/ ctx[11], dirty, get_defs_slot_changes),
+    						get_defs_slot_context
+    					);
+    				}
+    			}
+
+    			if (default_slot) {
+    				if (default_slot.p && (!current || dirty & /*$$scope, element*/ 2049)) {
+    					update_slot_base(
+    						default_slot,
+    						default_slot_template,
+    						ctx,
+    						/*$$scope*/ ctx[11],
+    						!current
+    						? get_all_dirty_from_scope(/*$$scope*/ ctx[11])
+    						: get_slot_changes(default_slot_template, /*$$scope*/ ctx[11], dirty, get_default_slot_changes),
+    						get_default_slot_context
+    					);
+    				}
+    			}
+
+    			if (!current || dirty & /*$padding*/ 128 && g_transform_value !== (g_transform_value = "translate(" + /*$padding*/ ctx[7].left + ", " + /*$padding*/ ctx[7].top + ")")) {
+    				attr_dev(g, "transform", g_transform_value);
+    			}
+
+    			if (!current || dirty & /*viewBox*/ 16) {
+    				attr_dev(svg, "viewBox", /*viewBox*/ ctx[4]);
+    			}
+
+    			if (!current || dirty & /*$containerWidth*/ 32) {
+    				attr_dev(svg, "width", /*$containerWidth*/ ctx[5]);
+    			}
+
+    			if (!current || dirty & /*$containerHeight*/ 64) {
+    				attr_dev(svg, "height", /*$containerHeight*/ ctx[6]);
+    			}
+
+    			if (dirty & /*zIndex*/ 4) {
+    				set_style(svg, "z-index", /*zIndex*/ ctx[2]);
+    			}
+
+    			if (dirty & /*pointerEvents*/ 8) {
+    				set_style(svg, "pointer-events", /*pointerEvents*/ ctx[3] === false ? 'none' : null);
+    			}
+    		},
+    		i: function intro(local) {
+    			if (current) return;
+    			transition_in(defs_slot, local);
+    			transition_in(default_slot, local);
+    			current = true;
+    		},
+    		o: function outro(local) {
+    			transition_out(defs_slot, local);
+    			transition_out(default_slot, local);
+    			current = false;
+    		},
+    		d: function destroy(detaching) {
+    			if (detaching) detach_dev(svg);
+    			if (defs_slot) defs_slot.d(detaching);
+    			if (default_slot) default_slot.d(detaching);
+    			/*g_binding*/ ctx[13](null);
+    			/*svg_binding*/ ctx[14](null);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_fragment$7.name,
+    		type: "component",
+    		source: "",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    function instance$7($$self, $$props, $$invalidate) {
+    	let $containerWidth;
+    	let $containerHeight;
+    	let $padding;
+    	let { $$slots: slots = {}, $$scope } = $$props;
+    	validate_slots('Svg', slots, ['defs','default']);
+    	let { element = undefined } = $$props;
+    	let { innerElement = undefined } = $$props;
+    	let { zIndex = undefined } = $$props;
+    	let { pointerEvents = undefined } = $$props;
+    	let { viewBox = undefined } = $$props;
+    	const { containerWidth, containerHeight, padding } = getContext('LayerCake');
+    	validate_store(containerWidth, 'containerWidth');
+    	component_subscribe($$self, containerWidth, value => $$invalidate(5, $containerWidth = value));
+    	validate_store(containerHeight, 'containerHeight');
+    	component_subscribe($$self, containerHeight, value => $$invalidate(6, $containerHeight = value));
+    	validate_store(padding, 'padding');
+    	component_subscribe($$self, padding, value => $$invalidate(7, $padding = value));
+    	const writable_props = ['element', 'innerElement', 'zIndex', 'pointerEvents', 'viewBox'];
+
+    	Object.keys($$props).forEach(key => {
+    		if (!~writable_props.indexOf(key) && key.slice(0, 2) !== '$$' && key !== 'slot') console.warn(`<Svg> was created with unknown prop '${key}'`);
+    	});
+
+    	function g_binding($$value) {
+    		binding_callbacks[$$value ? 'unshift' : 'push'](() => {
+    			innerElement = $$value;
+    			$$invalidate(1, innerElement);
+    		});
+    	}
+
+    	function svg_binding($$value) {
+    		binding_callbacks[$$value ? 'unshift' : 'push'](() => {
+    			element = $$value;
+    			$$invalidate(0, element);
+    		});
+    	}
+
+    	$$self.$$set = $$props => {
+    		if ('element' in $$props) $$invalidate(0, element = $$props.element);
+    		if ('innerElement' in $$props) $$invalidate(1, innerElement = $$props.innerElement);
+    		if ('zIndex' in $$props) $$invalidate(2, zIndex = $$props.zIndex);
+    		if ('pointerEvents' in $$props) $$invalidate(3, pointerEvents = $$props.pointerEvents);
+    		if ('viewBox' in $$props) $$invalidate(4, viewBox = $$props.viewBox);
+    		if ('$$scope' in $$props) $$invalidate(11, $$scope = $$props.$$scope);
+    	};
+
+    	$$self.$capture_state = () => ({
+    		getContext,
+    		element,
+    		innerElement,
+    		zIndex,
+    		pointerEvents,
+    		viewBox,
+    		containerWidth,
+    		containerHeight,
+    		padding,
+    		$containerWidth,
+    		$containerHeight,
+    		$padding
+    	});
+
+    	$$self.$inject_state = $$props => {
+    		if ('element' in $$props) $$invalidate(0, element = $$props.element);
+    		if ('innerElement' in $$props) $$invalidate(1, innerElement = $$props.innerElement);
+    		if ('zIndex' in $$props) $$invalidate(2, zIndex = $$props.zIndex);
+    		if ('pointerEvents' in $$props) $$invalidate(3, pointerEvents = $$props.pointerEvents);
+    		if ('viewBox' in $$props) $$invalidate(4, viewBox = $$props.viewBox);
+    	};
+
+    	if ($$props && "$$inject" in $$props) {
+    		$$self.$inject_state($$props.$$inject);
+    	}
+
+    	return [
+    		element,
+    		innerElement,
+    		zIndex,
+    		pointerEvents,
+    		viewBox,
+    		$containerWidth,
+    		$containerHeight,
+    		$padding,
+    		containerWidth,
+    		containerHeight,
+    		padding,
+    		$$scope,
+    		slots,
+    		g_binding,
+    		svg_binding
+    	];
+    }
+
+    class Svg extends SvelteComponentDev {
+    	constructor(options) {
+    		super(options);
+
+    		init$1(this, options, instance$7, create_fragment$7, safe_not_equal, {
+    			element: 0,
+    			innerElement: 1,
+    			zIndex: 2,
+    			pointerEvents: 3,
+    			viewBox: 4
+    		});
+
+    		dispatch_dev("SvelteRegisterComponent", {
+    			component: this,
+    			tagName: "Svg",
+    			options,
+    			id: create_fragment$7.name
+    		});
+    	}
+
+    	get element() {
+    		throw new Error("<Svg>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set element(value) {
+    		throw new Error("<Svg>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	get innerElement() {
+    		throw new Error("<Svg>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set innerElement(value) {
+    		throw new Error("<Svg>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	get zIndex() {
+    		throw new Error("<Svg>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set zIndex(value) {
+    		throw new Error("<Svg>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	get pointerEvents() {
+    		throw new Error("<Svg>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set pointerEvents(value) {
+    		throw new Error("<Svg>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	get viewBox() {
+    		throw new Error("<Svg>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set viewBox(value) {
+    		throw new Error("<Svg>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+    }
+
+    /* src/components/RadarFill.svelte generated by Svelte v3.58.0 */
+
+    const { console: console_1$1 } = globals;
+    const file$6 = "src/components/RadarFill.svelte";
+
+    function get_each_context$3(ctx, list, i) {
+    	const child_ctx = ctx.slice();
+    	child_ctx[24] = list[i];
+    	const constants_0 = /*$xGet*/ child_ctx[16](/*row*/ child_ctx[24]);
+    	child_ctx[25] = constants_0;
+    	return child_ctx;
+    }
+
+    function get_each_context_1(ctx, list, i) {
+    	const child_ctx = ctx.slice();
+    	child_ctx[28] = list[i];
+    	child_ctx[31] = i;
+    	const constants_0 = /*angleSlice*/ child_ctx[8] * /*i*/ child_ctx[31] - Math.PI / 2;
+    	child_ctx[29] = constants_0;
+    	return child_ctx;
+    }
+
+    // (60:4) {#each xVals as circleR, i}
+    function create_each_block_1(ctx) {
+    	let circle;
+    	let circle_cx_value;
+    	let circle_cy_value;
+    	let mounted;
+    	let dispose;
+
+    	function mouseover_handler(...args) {
+    		return /*mouseover_handler*/ ctx[22](/*i*/ ctx[31], /*circleR*/ ctx[28], /*thisAngleSlice*/ ctx[29], ...args);
+    	}
+
+    	const block = {
+    		c: function create() {
+    			circle = svg_element("circle");
+    			attr_dev(circle, "cx", circle_cx_value = /*circleR*/ ctx[28] * Math.cos(/*thisAngleSlice*/ ctx[29]));
+    			attr_dev(circle, "cy", circle_cy_value = /*circleR*/ ctx[28] * Math.sin(/*thisAngleSlice*/ ctx[29]));
+    			attr_dev(circle, "r", /*r*/ ctx[4]);
+    			attr_dev(circle, "fill", /*circleFill*/ ctx[5]);
+    			attr_dev(circle, "stroke", /*circleStroke*/ ctx[6]);
+    			attr_dev(circle, "stroke-width", /*circleStrokeWidth*/ ctx[7]);
+    			add_location(circle, file$6, 61, 6, 2178);
+    		},
+    		m: function mount(target, anchor) {
+    			insert_dev(target, circle, anchor);
+
+    			if (!mounted) {
+    				dispose = [
+    					listen_dev(circle, "mouseover", mouseover_handler, false, false, false, false),
+    					listen_dev(circle, "mouseout", /*mouseout_handler*/ ctx[23], false, false, false, false)
+    				];
+
+    				mounted = true;
+    			}
+    		},
+    		p: function update(new_ctx, dirty) {
+    			ctx = new_ctx;
+
+    			if (dirty[0] & /*$xGet, $data, angleSlice*/ 73984 && circle_cx_value !== (circle_cx_value = /*circleR*/ ctx[28] * Math.cos(/*thisAngleSlice*/ ctx[29]))) {
+    				attr_dev(circle, "cx", circle_cx_value);
+    			}
+
+    			if (dirty[0] & /*$xGet, $data, angleSlice*/ 73984 && circle_cy_value !== (circle_cy_value = /*circleR*/ ctx[28] * Math.sin(/*thisAngleSlice*/ ctx[29]))) {
+    				attr_dev(circle, "cy", circle_cy_value);
+    			}
+
+    			if (dirty[0] & /*r*/ 16) {
+    				attr_dev(circle, "r", /*r*/ ctx[4]);
+    			}
+
+    			if (dirty[0] & /*circleFill*/ 32) {
+    				attr_dev(circle, "fill", /*circleFill*/ ctx[5]);
+    			}
+
+    			if (dirty[0] & /*circleStroke*/ 64) {
+    				attr_dev(circle, "stroke", /*circleStroke*/ ctx[6]);
+    			}
+
+    			if (dirty[0] & /*circleStrokeWidth*/ 128) {
+    				attr_dev(circle, "stroke-width", /*circleStrokeWidth*/ ctx[7]);
+    			}
+    		},
+    		d: function destroy(detaching) {
+    			if (detaching) detach_dev(circle);
+    			mounted = false;
+    			run_all(dispose);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_each_block_1.name,
+    		type: "each",
+    		source: "(60:4) {#each xVals as circleR, i}",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    // (49:2) {#each $data as row}
+    function create_each_block$3(ctx) {
+    	let path_1;
+    	let path_1_d_value;
+    	let each_1_anchor;
+    	let each_value_1 = /*xVals*/ ctx[25];
+    	validate_each_argument(each_value_1);
+    	let each_blocks = [];
+
+    	for (let i = 0; i < each_value_1.length; i += 1) {
+    		each_blocks[i] = create_each_block_1(get_each_context_1(ctx, each_value_1, i));
+    	}
+
+    	const block = {
+    		c: function create() {
+    			path_1 = svg_element("path");
+
+    			for (let i = 0; i < each_blocks.length; i += 1) {
+    				each_blocks[i].c();
+    			}
+
+    			each_1_anchor = empty$3();
+    			attr_dev(path_1, "class", "path-line");
+    			attr_dev(path_1, "d", path_1_d_value = /*path*/ ctx[12](/*xVals*/ ctx[25]));
+    			attr_dev(path_1, "stroke", /*stroke*/ ctx[1]);
+    			attr_dev(path_1, "stroke-width", /*strokeWidth*/ ctx[2]);
+    			attr_dev(path_1, "fill", /*fill*/ ctx[0]);
+    			attr_dev(path_1, "fill-opacity", /*fillOpacity*/ ctx[3]);
+    			add_location(path_1, file$6, 50, 4, 1925);
+    		},
+    		m: function mount(target, anchor) {
+    			insert_dev(target, path_1, anchor);
+
+    			for (let i = 0; i < each_blocks.length; i += 1) {
+    				if (each_blocks[i]) {
+    					each_blocks[i].m(target, anchor);
+    				}
+    			}
+
+    			insert_dev(target, each_1_anchor, anchor);
+    		},
+    		p: function update(ctx, dirty) {
+    			if (dirty[0] & /*path, $xGet, $data*/ 77824 && path_1_d_value !== (path_1_d_value = /*path*/ ctx[12](/*xVals*/ ctx[25]))) {
+    				attr_dev(path_1, "d", path_1_d_value);
+    			}
+
+    			if (dirty[0] & /*stroke*/ 2) {
+    				attr_dev(path_1, "stroke", /*stroke*/ ctx[1]);
+    			}
+
+    			if (dirty[0] & /*strokeWidth*/ 4) {
+    				attr_dev(path_1, "stroke-width", /*strokeWidth*/ ctx[2]);
+    			}
+
+    			if (dirty[0] & /*fill*/ 1) {
+    				attr_dev(path_1, "fill", /*fill*/ ctx[0]);
+    			}
+
+    			if (dirty[0] & /*fillOpacity*/ 8) {
+    				attr_dev(path_1, "fill-opacity", /*fillOpacity*/ ctx[3]);
+    			}
+
+    			if (dirty[0] & /*$xGet, $data, angleSlice, r, circleFill, circleStroke, circleStrokeWidth, hovered, recorded_mouse_position*/ 77296) {
+    				each_value_1 = /*xVals*/ ctx[25];
+    				validate_each_argument(each_value_1);
+    				let i;
+
+    				for (i = 0; i < each_value_1.length; i += 1) {
+    					const child_ctx = get_each_context_1(ctx, each_value_1, i);
+
+    					if (each_blocks[i]) {
+    						each_blocks[i].p(child_ctx, dirty);
+    					} else {
+    						each_blocks[i] = create_each_block_1(child_ctx);
+    						each_blocks[i].c();
+    						each_blocks[i].m(each_1_anchor.parentNode, each_1_anchor);
+    					}
+    				}
+
+    				for (; i < each_blocks.length; i += 1) {
+    					each_blocks[i].d(1);
+    				}
+
+    				each_blocks.length = each_value_1.length;
+    			}
+    		},
+    		d: function destroy(detaching) {
+    			if (detaching) detach_dev(path_1);
+    			destroy_each(each_blocks, detaching);
+    			if (detaching) detach_dev(each_1_anchor);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_each_block$3.name,
+    		type: "each",
+    		source: "(49:2) {#each $data as row}",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    // (97:6) {#if hovered !== -1}
+    function create_if_block$2(ctx) {
+    	let t0_value = /*$data*/ ctx[13][0][/*$config*/ ctx[9].x[/*hovered*/ ctx[10]]] + "";
+    	let t0;
+    	let t1;
+    	let t2_value = /*$config*/ ctx[9].x[/*hovered*/ ctx[10]] + "";
+    	let t2;
+
+    	const block = {
+    		c: function create() {
+    			t0 = text$1(t0_value);
+    			t1 = text$1("% migrated via: ");
+    			t2 = text$1(t2_value);
+    		},
+    		m: function mount(target, anchor) {
+    			insert_dev(target, t0, anchor);
+    			insert_dev(target, t1, anchor);
+    			insert_dev(target, t2, anchor);
+    		},
+    		p: function update(ctx, dirty) {
+    			if (dirty[0] & /*$data, $config, hovered*/ 9728 && t0_value !== (t0_value = /*$data*/ ctx[13][0][/*$config*/ ctx[9].x[/*hovered*/ ctx[10]]] + "")) set_data_dev(t0, t0_value);
+    			if (dirty[0] & /*$config, hovered*/ 1536 && t2_value !== (t2_value = /*$config*/ ctx[9].x[/*hovered*/ ctx[10]] + "")) set_data_dev(t2, t2_value);
+    		},
+    		d: function destroy(detaching) {
+    			if (detaching) detach_dev(t0);
+    			if (detaching) detach_dev(t1);
+    			if (detaching) detach_dev(t2);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_if_block$2.name,
+    		type: "if",
+    		source: "(97:6) {#if hovered !== -1}",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    function create_fragment$6(ctx) {
+    	let g1;
+    	let g0;
+    	let rect;
+    	let text_1;
+    	let g0_class_value;
+    	let g0_transform_value;
+    	let g1_transform_value;
+    	let each_value = /*$data*/ ctx[13];
+    	validate_each_argument(each_value);
+    	let each_blocks = [];
+
+    	for (let i = 0; i < each_value.length; i += 1) {
+    		each_blocks[i] = create_each_block$3(get_each_context$3(ctx, each_value, i));
+    	}
+
+    	let if_block = /*hovered*/ ctx[10] !== -1 && create_if_block$2(ctx);
+
+    	const block = {
+    		c: function create() {
+    			g1 = svg_element("g");
+
+    			for (let i = 0; i < each_blocks.length; i += 1) {
+    				each_blocks[i].c();
+    			}
+
+    			g0 = svg_element("g");
+    			rect = svg_element("rect");
+    			text_1 = svg_element("text");
+    			if (if_block) if_block.c();
+    			attr_dev(rect, "fill", "#E6C39C");
+    			attr_dev(rect, "width", "650");
+    			attr_dev(rect, "height", "80");
+    			attr_dev(rect, "rx", "10");
+    			attr_dev(rect, "ry", "10");
+    			attr_dev(rect, "transform", "translate(-325, -42)");
+    			add_location(rect, file$6, 87, 4, 2930);
+    			attr_dev(text_1, "dominant-baseline", "middle");
+    			attr_dev(text_1, "text-anchor", "middle");
+    			add_location(text_1, file$6, 95, 4, 3071);
+
+    			attr_dev(g0, "class", g0_class_value = /*hovered*/ ctx[10] === -1
+    			? "radar-tooltip-hidden"
+    			: "radar-tooltip-visible");
+
+    			attr_dev(g0, "transform", g0_transform_value = "translate(" + (/*recorded_mouse_position*/ ctx[11].x - 80) + ", " + (/*recorded_mouse_position*/ ctx[11].y - 80) + ")");
+    			add_location(g0, file$6, 82, 2, 2741);
+    			attr_dev(g1, "transform", g1_transform_value = "translate(" + /*$width*/ ctx[14] / 1.5 + ", " + /*$height*/ ctx[15] / 1.5 + ")");
+    			add_location(g1, file$6, 47, 0, 1807);
+    		},
+    		l: function claim(nodes) {
+    			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
+    		},
+    		m: function mount(target, anchor) {
+    			insert_dev(target, g1, anchor);
+
+    			for (let i = 0; i < each_blocks.length; i += 1) {
+    				if (each_blocks[i]) {
+    					each_blocks[i].m(g1, null);
+    				}
+    			}
+
+    			append_dev(g1, g0);
+    			append_dev(g0, rect);
+    			append_dev(g0, text_1);
+    			if (if_block) if_block.m(text_1, null);
+    		},
+    		p: function update(ctx, dirty) {
+    			if (dirty[0] & /*$xGet, $data, angleSlice, r, circleFill, circleStroke, circleStrokeWidth, hovered, recorded_mouse_position, path, stroke, strokeWidth, fill, fillOpacity*/ 81407) {
+    				each_value = /*$data*/ ctx[13];
+    				validate_each_argument(each_value);
+    				let i;
+
+    				for (i = 0; i < each_value.length; i += 1) {
+    					const child_ctx = get_each_context$3(ctx, each_value, i);
+
+    					if (each_blocks[i]) {
+    						each_blocks[i].p(child_ctx, dirty);
+    					} else {
+    						each_blocks[i] = create_each_block$3(child_ctx);
+    						each_blocks[i].c();
+    						each_blocks[i].m(g1, g0);
+    					}
+    				}
+
+    				for (; i < each_blocks.length; i += 1) {
+    					each_blocks[i].d(1);
+    				}
+
+    				each_blocks.length = each_value.length;
+    			}
+
+    			if (/*hovered*/ ctx[10] !== -1) {
+    				if (if_block) {
+    					if_block.p(ctx, dirty);
+    				} else {
+    					if_block = create_if_block$2(ctx);
+    					if_block.c();
+    					if_block.m(text_1, null);
+    				}
+    			} else if (if_block) {
+    				if_block.d(1);
+    				if_block = null;
+    			}
+
+    			if (dirty[0] & /*hovered*/ 1024 && g0_class_value !== (g0_class_value = /*hovered*/ ctx[10] === -1
+    			? "radar-tooltip-hidden"
+    			: "radar-tooltip-visible")) {
+    				attr_dev(g0, "class", g0_class_value);
+    			}
+
+    			if (dirty[0] & /*recorded_mouse_position*/ 2048 && g0_transform_value !== (g0_transform_value = "translate(" + (/*recorded_mouse_position*/ ctx[11].x - 80) + ", " + (/*recorded_mouse_position*/ ctx[11].y - 80) + ")")) {
+    				attr_dev(g0, "transform", g0_transform_value);
+    			}
+
+    			if (dirty[0] & /*$width, $height*/ 49152 && g1_transform_value !== (g1_transform_value = "translate(" + /*$width*/ ctx[14] / 1.5 + ", " + /*$height*/ ctx[15] / 1.5 + ")")) {
+    				attr_dev(g1, "transform", g1_transform_value);
+    			}
+    		},
+    		i: noop$4,
+    		o: noop$4,
+    		d: function destroy(detaching) {
+    			if (detaching) detach_dev(g1);
+    			destroy_each(each_blocks, detaching);
+    			if (if_block) if_block.d();
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_fragment$6.name,
+    		type: "component",
+    		source: "",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    function instance$6($$self, $$props, $$invalidate) {
+    	let angleSlice;
+    	let path;
+    	let $config;
+    	let $data;
+    	let $width;
+    	let $height;
+    	let $xGet;
+    	let { $$slots: slots = {}, $$scope } = $$props;
+    	validate_slots('RadarFill', slots, []);
+    	const { data, width, height, xGet, config } = getContext("LayerCake");
+    	validate_store(data, 'data');
+    	component_subscribe($$self, data, value => $$invalidate(13, $data = value));
+    	validate_store(width, 'width');
+    	component_subscribe($$self, width, value => $$invalidate(14, $width = value));
+    	validate_store(height, 'height');
+    	component_subscribe($$self, height, value => $$invalidate(15, $height = value));
+    	validate_store(xGet, 'xGet');
+    	component_subscribe($$self, xGet, value => $$invalidate(16, $xGet = value));
+    	validate_store(config, 'config');
+    	component_subscribe($$self, config, value => $$invalidate(9, $config = value));
+    	console.log($data[0]);
+    	let { fill = "#f0c" } = $$props;
+    	let { stroke = "#f0c" } = $$props;
+    	let { strokeWidth = 2 } = $$props;
+    	let { fillOpacity = 0.5 } = $$props;
+    	let { r = 8 } = $$props;
+    	let { circleFill = "#f0c" } = $$props;
+    	let { circleStroke = "#fff" } = $$props;
+    	let { circleStrokeWidth = 1 } = $$props;
+    	let hovered = -1;
+    	let recorded_mouse_position = { x: 0, y: 0 };
+
+    	const writable_props = [
+    		'fill',
+    		'stroke',
+    		'strokeWidth',
+    		'fillOpacity',
+    		'r',
+    		'circleFill',
+    		'circleStroke',
+    		'circleStrokeWidth'
+    	];
+
+    	Object.keys($$props).forEach(key => {
+    		if (!~writable_props.indexOf(key) && key.slice(0, 2) !== '$$' && key !== 'slot') console_1$1.warn(`<RadarFill> was created with unknown prop '${key}'`);
+    	});
+
+    	const mouseover_handler = (i, circleR, thisAngleSlice, event) => {
+    		$$invalidate(10, hovered = i);
+
+    		$$invalidate(11, recorded_mouse_position = {
+    			x: circleR * Math.cos(thisAngleSlice),
+    			y: circleR * Math.sin(thisAngleSlice)
+    		});
+
+    		console.log(i);
+    	};
+
+    	const mouseout_handler = event => {
+    		$$invalidate(10, hovered = -1);
+    	};
+
+    	$$self.$$set = $$props => {
+    		if ('fill' in $$props) $$invalidate(0, fill = $$props.fill);
+    		if ('stroke' in $$props) $$invalidate(1, stroke = $$props.stroke);
+    		if ('strokeWidth' in $$props) $$invalidate(2, strokeWidth = $$props.strokeWidth);
+    		if ('fillOpacity' in $$props) $$invalidate(3, fillOpacity = $$props.fillOpacity);
+    		if ('r' in $$props) $$invalidate(4, r = $$props.r);
+    		if ('circleFill' in $$props) $$invalidate(5, circleFill = $$props.circleFill);
+    		if ('circleStroke' in $$props) $$invalidate(6, circleStroke = $$props.circleStroke);
+    		if ('circleStrokeWidth' in $$props) $$invalidate(7, circleStrokeWidth = $$props.circleStrokeWidth);
+    	};
+
+    	$$self.$capture_state = () => ({
+    		getContext,
+    		line,
+    		curveCardinalClosed,
+    		data,
+    		width,
+    		height,
+    		xGet,
+    		config,
+    		fill,
+    		stroke,
+    		strokeWidth,
+    		fillOpacity,
+    		r,
+    		circleFill,
+    		circleStroke,
+    		circleStrokeWidth,
+    		hovered,
+    		recorded_mouse_position,
+    		angleSlice,
+    		path,
+    		$config,
+    		$data,
+    		$width,
+    		$height,
+    		$xGet
+    	});
+
+    	$$self.$inject_state = $$props => {
+    		if ('fill' in $$props) $$invalidate(0, fill = $$props.fill);
+    		if ('stroke' in $$props) $$invalidate(1, stroke = $$props.stroke);
+    		if ('strokeWidth' in $$props) $$invalidate(2, strokeWidth = $$props.strokeWidth);
+    		if ('fillOpacity' in $$props) $$invalidate(3, fillOpacity = $$props.fillOpacity);
+    		if ('r' in $$props) $$invalidate(4, r = $$props.r);
+    		if ('circleFill' in $$props) $$invalidate(5, circleFill = $$props.circleFill);
+    		if ('circleStroke' in $$props) $$invalidate(6, circleStroke = $$props.circleStroke);
+    		if ('circleStrokeWidth' in $$props) $$invalidate(7, circleStrokeWidth = $$props.circleStrokeWidth);
+    		if ('hovered' in $$props) $$invalidate(10, hovered = $$props.hovered);
+    		if ('recorded_mouse_position' in $$props) $$invalidate(11, recorded_mouse_position = $$props.recorded_mouse_position);
+    		if ('angleSlice' in $$props) $$invalidate(8, angleSlice = $$props.angleSlice);
+    		if ('path' in $$props) $$invalidate(12, path = $$props.path);
+    	};
+
+    	if ($$props && "$$inject" in $$props) {
+    		$$self.$inject_state($$props.$$inject);
+    	}
+
+    	$$self.$$.update = () => {
+    		if ($$self.$$.dirty[0] & /*$config*/ 512) {
+    			$$invalidate(8, angleSlice = Math.PI * 2 / $config.x.length);
+    		}
+
+    		if ($$self.$$.dirty[0] & /*angleSlice*/ 256) {
+    			$$invalidate(12, path = line().curve(curveCardinalClosed).x((d, i) => d * Math.cos(angleSlice * i - Math.PI / 2)).y((d, i) => d * Math.sin(angleSlice * i - Math.PI / 2)));
+    		}
+    	};
+
+    	return [
+    		fill,
+    		stroke,
+    		strokeWidth,
+    		fillOpacity,
+    		r,
+    		circleFill,
+    		circleStroke,
+    		circleStrokeWidth,
+    		angleSlice,
+    		$config,
+    		hovered,
+    		recorded_mouse_position,
+    		path,
+    		$data,
+    		$width,
+    		$height,
+    		$xGet,
+    		data,
+    		width,
+    		height,
+    		xGet,
+    		config,
+    		mouseover_handler,
+    		mouseout_handler
+    	];
+    }
+
+    class RadarFill extends SvelteComponentDev {
+    	constructor(options) {
+    		super(options);
+
+    		init$1(
+    			this,
+    			options,
+    			instance$6,
+    			create_fragment$6,
+    			safe_not_equal,
+    			{
+    				fill: 0,
+    				stroke: 1,
+    				strokeWidth: 2,
+    				fillOpacity: 3,
+    				r: 4,
+    				circleFill: 5,
+    				circleStroke: 6,
+    				circleStrokeWidth: 7
+    			},
+    			null,
+    			[-1, -1]
+    		);
+
+    		dispatch_dev("SvelteRegisterComponent", {
+    			component: this,
+    			tagName: "RadarFill",
+    			options,
+    			id: create_fragment$6.name
+    		});
+    	}
+
+    	get fill() {
+    		throw new Error("<RadarFill>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set fill(value) {
+    		throw new Error("<RadarFill>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	get stroke() {
+    		throw new Error("<RadarFill>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set stroke(value) {
+    		throw new Error("<RadarFill>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	get strokeWidth() {
+    		throw new Error("<RadarFill>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set strokeWidth(value) {
+    		throw new Error("<RadarFill>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	get fillOpacity() {
+    		throw new Error("<RadarFill>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set fillOpacity(value) {
+    		throw new Error("<RadarFill>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	get r() {
+    		throw new Error("<RadarFill>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set r(value) {
+    		throw new Error("<RadarFill>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	get circleFill() {
+    		throw new Error("<RadarFill>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set circleFill(value) {
+    		throw new Error("<RadarFill>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	get circleStroke() {
+    		throw new Error("<RadarFill>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set circleStroke(value) {
+    		throw new Error("<RadarFill>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	get circleStrokeWidth() {
+    		throw new Error("<RadarFill>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set circleStrokeWidth(value) {
+    		throw new Error("<RadarFill>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+    }
+
+    /* src/components/RadarAxis.svelte generated by Svelte v3.58.0 */
+    const file$5 = "src/components/RadarAxis.svelte";
+
+    function get_each_context$2(ctx, list, i) {
+    	const child_ctx = ctx.slice();
+    	child_ctx[16] = list[i];
+    	child_ctx[19] = i;
+    	const constants_0 = /*angleSlice*/ child_ctx[2] * /*i*/ child_ctx[19] - Math.PI / 2;
+    	child_ctx[17] = constants_0;
+    	return child_ctx;
+    }
+
+    // (50:2) {#each $config.x as label, i}
+    function create_each_block$2(ctx) {
+    	let line;
+    	let line_x__value;
+    	let line_y__value;
+    	let text_1;
+    	let t_value = /*label*/ ctx[16] + "";
+    	let t;
+    	let text_1_text_anchor_value;
+    	let text_1_transform_value;
+
+    	const block = {
+    		c: function create() {
+    			line = svg_element("line");
+    			text_1 = svg_element("text");
+    			t = text$1(t_value);
+    			attr_dev(line, "x1", "0");
+    			attr_dev(line, "y1", "0");
+    			attr_dev(line, "x2", line_x__value = /*lineLength*/ ctx[4] * Math.cos(/*thisAngleSlice*/ ctx[17]));
+    			attr_dev(line, "y2", line_y__value = /*lineLength*/ ctx[4] * Math.sin(/*thisAngleSlice*/ ctx[17]));
+    			attr_dev(line, "stroke", "#ccc");
+    			attr_dev(line, "stroke-width", "1");
+    			attr_dev(line, "fill", "none");
+    			add_location(line, file$5, 51, 4, 1455);
+    			attr_dev(text_1, "text-anchor", text_1_text_anchor_value = anchor(/*$config*/ ctx[1].x.length, /*i*/ ctx[19]));
+    			attr_dev(text_1, "dy", "0.35em");
+    			attr_dev(text_1, "font-size", "20px");
+    			attr_dev(text_1, "text-outline", "#fff");
+    			attr_dev(text_1, "font-family", "Lato");
+    			attr_dev(text_1, "transform", text_1_transform_value = "translate(" + /*labelPlacement*/ ctx[3] * Math.cos(/*thisAngleSlice*/ ctx[17]) + ", " + /*labelPlacement*/ ctx[3] * Math.sin(/*thisAngleSlice*/ ctx[17]) + ")");
+    			add_location(text_1, file$5, 60, 4, 1657);
+    		},
+    		m: function mount(target, anchor) {
+    			insert_dev(target, line, anchor);
+    			insert_dev(target, text_1, anchor);
+    			append_dev(text_1, t);
+    		},
+    		p: function update(ctx, dirty) {
+    			if (dirty & /*lineLength, angleSlice*/ 20 && line_x__value !== (line_x__value = /*lineLength*/ ctx[4] * Math.cos(/*thisAngleSlice*/ ctx[17]))) {
+    				attr_dev(line, "x2", line_x__value);
+    			}
+
+    			if (dirty & /*lineLength, angleSlice*/ 20 && line_y__value !== (line_y__value = /*lineLength*/ ctx[4] * Math.sin(/*thisAngleSlice*/ ctx[17]))) {
+    				attr_dev(line, "y2", line_y__value);
+    			}
+
+    			if (dirty & /*$config*/ 2 && t_value !== (t_value = /*label*/ ctx[16] + "")) set_data_dev(t, t_value);
+
+    			if (dirty & /*$config*/ 2 && text_1_text_anchor_value !== (text_1_text_anchor_value = anchor(/*$config*/ ctx[1].x.length, /*i*/ ctx[19]))) {
+    				attr_dev(text_1, "text-anchor", text_1_text_anchor_value);
+    			}
+
+    			if (dirty & /*labelPlacement, angleSlice*/ 12 && text_1_transform_value !== (text_1_transform_value = "translate(" + /*labelPlacement*/ ctx[3] * Math.cos(/*thisAngleSlice*/ ctx[17]) + ", " + /*labelPlacement*/ ctx[3] * Math.sin(/*thisAngleSlice*/ ctx[17]) + ")")) {
+    				attr_dev(text_1, "transform", text_1_transform_value);
+    			}
+    		},
+    		d: function destroy(detaching) {
+    			if (detaching) detach_dev(line);
+    			if (detaching) detach_dev(text_1);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_each_block$2.name,
+    		type: "each",
+    		source: "(50:2) {#each $config.x as label, i}",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    function create_fragment$5(ctx) {
+    	let g;
+    	let circle0;
+    	let circle1;
+    	let circle1_r_value;
+    	let text0;
+    	let t0;
+    	let text0_transform_value;
+    	let text1;
+    	let t1;
+    	let text1_transform_value;
+    	let g_transform_value;
+    	let each_value = /*$config*/ ctx[1].x;
+    	validate_each_argument(each_value);
+    	let each_blocks = [];
+
+    	for (let i = 0; i < each_value.length; i += 1) {
+    		each_blocks[i] = create_each_block$2(get_each_context$2(ctx, each_value, i));
+    	}
+
+    	const block = {
+    		c: function create() {
+    			g = svg_element("g");
+    			circle0 = svg_element("circle");
+    			circle1 = svg_element("circle");
+    			text0 = svg_element("text");
+    			t0 = text$1("25%");
+    			text1 = svg_element("text");
+    			t1 = text$1("50%");
+
+    			for (let i = 0; i < each_blocks.length; i += 1) {
+    				each_blocks[i].c();
+    			}
+
+    			attr_dev(circle0, "cx", "0");
+    			attr_dev(circle0, "cy", "0");
+    			attr_dev(circle0, "r", /*max*/ ctx[0]);
+    			attr_dev(circle0, "stroke", "#ccc");
+    			attr_dev(circle0, "stroke-width", "1");
+    			attr_dev(circle0, "fill", "#CDCDCD");
+    			attr_dev(circle0, "fill-opacity", "0.1");
+    			add_location(circle0, file$5, 29, 2, 968);
+    			attr_dev(circle1, "cx", "0");
+    			attr_dev(circle1, "cy", "0");
+    			attr_dev(circle1, "r", circle1_r_value = /*max*/ ctx[0] / 2);
+    			attr_dev(circle1, "stroke", "#ccc");
+    			attr_dev(circle1, "stroke-width", "1");
+    			attr_dev(circle1, "fill", "none");
+    			add_location(circle1, file$5, 38, 2, 1098);
+    			attr_dev(text0, "transform", text0_transform_value = "translate(2, -" + /*max*/ ctx[0] / 1.9 + ")");
+    			attr_dev(text0, "font-family", "Lato");
+    			add_location(text0, file$5, 46, 2, 1206);
+    			attr_dev(text1, "transform", text1_transform_value = "translate(2, -" + /*max*/ ctx[0] / 0.98 + ")");
+    			attr_dev(text1, "font-family", "Lato");
+    			add_location(text1, file$5, 47, 2, 1283);
+    			attr_dev(g, "transform", g_transform_value = "translate(" + /*$width*/ ctx[5] / 1.5 + ", " + /*$height*/ ctx[6] / 1.5 + ")");
+    			add_location(g, file$5, 28, 0, 907);
+    		},
+    		l: function claim(nodes) {
+    			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
+    		},
+    		m: function mount(target, anchor) {
+    			insert_dev(target, g, anchor);
+    			append_dev(g, circle0);
+    			append_dev(g, circle1);
+    			append_dev(g, text0);
+    			append_dev(text0, t0);
+    			append_dev(g, text1);
+    			append_dev(text1, t1);
+
+    			for (let i = 0; i < each_blocks.length; i += 1) {
+    				if (each_blocks[i]) {
+    					each_blocks[i].m(g, null);
+    				}
+    			}
+    		},
+    		p: function update(ctx, [dirty]) {
+    			if (dirty & /*max*/ 1) {
+    				attr_dev(circle0, "r", /*max*/ ctx[0]);
+    			}
+
+    			if (dirty & /*max*/ 1 && circle1_r_value !== (circle1_r_value = /*max*/ ctx[0] / 2)) {
+    				attr_dev(circle1, "r", circle1_r_value);
+    			}
+
+    			if (dirty & /*max*/ 1 && text0_transform_value !== (text0_transform_value = "translate(2, -" + /*max*/ ctx[0] / 1.9 + ")")) {
+    				attr_dev(text0, "transform", text0_transform_value);
+    			}
+
+    			if (dirty & /*max*/ 1 && text1_transform_value !== (text1_transform_value = "translate(2, -" + /*max*/ ctx[0] / 0.98 + ")")) {
+    				attr_dev(text1, "transform", text1_transform_value);
+    			}
+
+    			if (dirty & /*anchor, $config, labelPlacement, Math, angleSlice, lineLength*/ 30) {
+    				each_value = /*$config*/ ctx[1].x;
+    				validate_each_argument(each_value);
+    				let i;
+
+    				for (i = 0; i < each_value.length; i += 1) {
+    					const child_ctx = get_each_context$2(ctx, each_value, i);
+
+    					if (each_blocks[i]) {
+    						each_blocks[i].p(child_ctx, dirty);
+    					} else {
+    						each_blocks[i] = create_each_block$2(child_ctx);
+    						each_blocks[i].c();
+    						each_blocks[i].m(g, null);
+    					}
+    				}
+
+    				for (; i < each_blocks.length; i += 1) {
+    					each_blocks[i].d(1);
+    				}
+
+    				each_blocks.length = each_value.length;
+    			}
+
+    			if (dirty & /*$width, $height*/ 96 && g_transform_value !== (g_transform_value = "translate(" + /*$width*/ ctx[5] / 1.5 + ", " + /*$height*/ ctx[6] / 1.5 + ")")) {
+    				attr_dev(g, "transform", g_transform_value);
+    			}
+    		},
+    		i: noop$4,
+    		o: noop$4,
+    		d: function destroy(detaching) {
+    			if (detaching) detach_dev(g);
+    			destroy_each(each_blocks, detaching);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_fragment$5.name,
+    		type: "component",
+    		source: "",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    function anchor(total, i) {
+    	if (i === 0 || i === total / 2) {
+    		return "middle";
+    	} else if (i < total / 2) {
+    		return "start";
+    	}
+
+    	return "end";
+    }
+
+    function instance$5($$self, $$props, $$invalidate) {
+    	let max;
+    	let lineLength;
+    	let labelPlacement;
+    	let angleSlice;
+    	let $config;
+    	let $extents;
+    	let $xScale;
+    	let $width;
+    	let $height;
+    	let { $$slots: slots = {}, $$scope } = $$props;
+    	validate_slots('RadarAxis', slots, []);
+    	const { width, height, xScale, extents, config } = getContext("LayerCake");
+    	validate_store(width, 'width');
+    	component_subscribe($$self, width, value => $$invalidate(5, $width = value));
+    	validate_store(height, 'height');
+    	component_subscribe($$self, height, value => $$invalidate(6, $height = value));
+    	validate_store(xScale, 'xScale');
+    	component_subscribe($$self, xScale, value => $$invalidate(15, $xScale = value));
+    	validate_store(extents, 'extents');
+    	component_subscribe($$self, extents, value => $$invalidate(14, $extents = value));
+    	validate_store(config, 'config');
+    	component_subscribe($$self, config, value => $$invalidate(1, $config = value));
+    	let { lineLengthFactor = 1.1 } = $$props;
+    	let { labelPlacementFactor = 1.2 } = $$props;
+    	const writable_props = ['lineLengthFactor', 'labelPlacementFactor'];
+
+    	Object.keys($$props).forEach(key => {
+    		if (!~writable_props.indexOf(key) && key.slice(0, 2) !== '$$' && key !== 'slot') console.warn(`<RadarAxis> was created with unknown prop '${key}'`);
+    	});
+
+    	$$self.$$set = $$props => {
+    		if ('lineLengthFactor' in $$props) $$invalidate(12, lineLengthFactor = $$props.lineLengthFactor);
+    		if ('labelPlacementFactor' in $$props) $$invalidate(13, labelPlacementFactor = $$props.labelPlacementFactor);
+    	};
+
+    	$$self.$capture_state = () => ({
+    		getContext,
+    		width,
+    		height,
+    		xScale,
+    		extents,
+    		config,
+    		lineLengthFactor,
+    		labelPlacementFactor,
+    		anchor,
+    		angleSlice,
+    		max,
+    		labelPlacement,
+    		lineLength,
+    		$config,
+    		$extents,
+    		$xScale,
+    		$width,
+    		$height
+    	});
+
+    	$$self.$inject_state = $$props => {
+    		if ('lineLengthFactor' in $$props) $$invalidate(12, lineLengthFactor = $$props.lineLengthFactor);
+    		if ('labelPlacementFactor' in $$props) $$invalidate(13, labelPlacementFactor = $$props.labelPlacementFactor);
+    		if ('angleSlice' in $$props) $$invalidate(2, angleSlice = $$props.angleSlice);
+    		if ('max' in $$props) $$invalidate(0, max = $$props.max);
+    		if ('labelPlacement' in $$props) $$invalidate(3, labelPlacement = $$props.labelPlacement);
+    		if ('lineLength' in $$props) $$invalidate(4, lineLength = $$props.lineLength);
+    	};
+
+    	if ($$props && "$$inject" in $$props) {
+    		$$self.$inject_state($$props.$$inject);
+    	}
+
+    	$$self.$$.update = () => {
+    		if ($$self.$$.dirty & /*$xScale, $extents*/ 49152) {
+    			$$invalidate(0, max = $xScale(Math.max(...$extents.x)));
+    		}
+
+    		if ($$self.$$.dirty & /*max, lineLengthFactor*/ 4097) {
+    			$$invalidate(4, lineLength = max * lineLengthFactor);
+    		}
+
+    		if ($$self.$$.dirty & /*max, labelPlacementFactor*/ 8193) {
+    			$$invalidate(3, labelPlacement = max * labelPlacementFactor);
+    		}
+
+    		if ($$self.$$.dirty & /*$config*/ 2) {
+    			$$invalidate(2, angleSlice = Math.PI * 2 / $config.x.length);
+    		}
+    	};
+
+    	return [
+    		max,
+    		$config,
+    		angleSlice,
+    		labelPlacement,
+    		lineLength,
+    		$width,
+    		$height,
+    		width,
+    		height,
+    		xScale,
+    		extents,
+    		config,
+    		lineLengthFactor,
+    		labelPlacementFactor,
+    		$extents,
+    		$xScale
+    	];
+    }
+
+    class RadarAxis extends SvelteComponentDev {
+    	constructor(options) {
+    		super(options);
+
+    		init$1(this, options, instance$5, create_fragment$5, safe_not_equal, {
+    			lineLengthFactor: 12,
+    			labelPlacementFactor: 13
+    		});
+
+    		dispatch_dev("SvelteRegisterComponent", {
+    			component: this,
+    			tagName: "RadarAxis",
+    			options,
+    			id: create_fragment$5.name
+    		});
+    	}
+
+    	get lineLengthFactor() {
+    		throw new Error("<RadarAxis>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set lineLengthFactor(value) {
+    		throw new Error("<RadarAxis>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	get labelPlacementFactor() {
+    		throw new Error("<RadarAxis>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set labelPlacementFactor(value) {
+    		throw new Error("<RadarAxis>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+    }
+
+    var data = [
+    	{
+    		name: 'Data',
+    		"National Identity Document": 7.0,
+        	"Passport, No Visa Required": 2.8,
+        	"Other": 2.7,
+    		"Illegally with Coyote": 54.1,
+    		"Illegally via Caravans": 2.3,
+        	"Illegally Independently": 20.5,
+        	"Foreign Residence": 1.9,
+        	"Papers from Mexico": 0.5,
+        	"Refuge/Asylum": 0.2,
+    		"Visa": 8
+    	}
+    ];
+
+    /* src/components/Radar.svelte generated by Svelte v3.58.0 */
+
+    const { Object: Object_1 } = globals;
+    const file$4 = "src/components/Radar.svelte";
+
+    // (43:4) <Svg viewBox="0 0 900 900">
+    function create_default_slot_1(ctx) {
+    	let radaraxis;
+    	let t;
+    	let radarfill;
+    	let current;
+    	radaraxis = new RadarAxis({ $$inline: true });
+    	radarfill = new RadarFill({ $$inline: true });
+
+    	const block = {
+    		c: function create() {
+    			create_component(radaraxis.$$.fragment);
+    			t = space();
+    			create_component(radarfill.$$.fragment);
+    		},
+    		m: function mount(target, anchor) {
+    			mount_component(radaraxis, target, anchor);
+    			insert_dev(target, t, anchor);
+    			mount_component(radarfill, target, anchor);
+    			current = true;
+    		},
+    		i: function intro(local) {
+    			if (current) return;
+    			transition_in(radaraxis.$$.fragment, local);
+    			transition_in(radarfill.$$.fragment, local);
+    			current = true;
+    		},
+    		o: function outro(local) {
+    			transition_out(radaraxis.$$.fragment, local);
+    			transition_out(radarfill.$$.fragment, local);
+    			current = false;
+    		},
+    		d: function destroy(detaching) {
+    			destroy_component(radaraxis, detaching);
+    			if (detaching) detach_dev(t);
+    			destroy_component(radarfill, detaching);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_default_slot_1.name,
+    		type: "slot",
+    		source: "(43:4) <Svg viewBox=\\\"0 0 900 900\\\">",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    // (36:2) <LayerCake     padding={{ top: 30, right: 0, bottom: 7, left: 0 }}     x={xKey}     xDomain={[0, 60]}     xRange={({ height }) => [0, height / 2]}     {data}   >
+    function create_default_slot(ctx) {
+    	let svg;
+    	let current;
+
+    	svg = new Svg({
+    			props: {
+    				viewBox: "0 0 900 900",
+    				$$slots: { default: [create_default_slot_1] },
+    				$$scope: { ctx }
+    			},
+    			$$inline: true
+    		});
+
+    	const block = {
+    		c: function create() {
+    			create_component(svg.$$.fragment);
+    		},
+    		m: function mount(target, anchor) {
+    			mount_component(svg, target, anchor);
+    			current = true;
+    		},
+    		p: function update(ctx, dirty) {
+    			const svg_changes = {};
+
+    			if (dirty & /*$$scope*/ 4) {
+    				svg_changes.$$scope = { dirty, ctx };
+    			}
+
+    			svg.$set(svg_changes);
+    		},
+    		i: function intro(local) {
+    			if (current) return;
+    			transition_in(svg.$$.fragment, local);
+    			current = true;
+    		},
+    		o: function outro(local) {
+    			transition_out(svg.$$.fragment, local);
+    			current = false;
+    		},
+    		d: function destroy(detaching) {
+    			destroy_component(svg, detaching);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_default_slot.name,
+    		type: "slot",
+    		source: "(36:2) <LayerCake     padding={{ top: 30, right: 0, bottom: 7, left: 0 }}     x={xKey}     xDomain={[0, 60]}     xRange={({ height }) => [0, height / 2]}     {data}   >",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    function create_fragment$4(ctx) {
+    	let h3;
+    	let t1;
+    	let div;
+    	let layercake;
+    	let current;
+
+    	layercake = new LayerCake({
+    			props: {
+    				padding: { top: 30, right: 0, bottom: 7, left: 0 },
+    				x: /*xKey*/ ctx[0],
+    				xDomain: [0, 60],
+    				xRange: func,
+    				data,
+    				$$slots: { default: [create_default_slot] },
+    				$$scope: { ctx }
+    			},
+    			$$inline: true
+    		});
+
+    	const block = {
+    		c: function create() {
+    			h3 = element("h3");
+    			h3.textContent = "Legal vs. Illegal Migration";
+    			t1 = space();
+    			div = element("div");
+    			create_component(layercake.$$.fragment);
+    			add_location(h3, file$4, 32, 0, 722);
+    			attr_dev(div, "class", "chart-container");
+    			add_location(div, file$4, 34, 0, 760);
+    		},
+    		l: function claim(nodes) {
+    			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
+    		},
+    		m: function mount(target, anchor) {
+    			insert_dev(target, h3, anchor);
+    			insert_dev(target, t1, anchor);
+    			insert_dev(target, div, anchor);
+    			mount_component(layercake, div, null);
+    			current = true;
+    		},
+    		p: function update(ctx, [dirty]) {
+    			const layercake_changes = {};
+
+    			if (dirty & /*$$scope*/ 4) {
+    				layercake_changes.$$scope = { dirty, ctx };
+    			}
+
+    			layercake.$set(layercake_changes);
+    		},
+    		i: function intro(local) {
+    			if (current) return;
+    			transition_in(layercake.$$.fragment, local);
+    			current = true;
+    		},
+    		o: function outro(local) {
+    			transition_out(layercake.$$.fragment, local);
+    			current = false;
+    		},
+    		d: function destroy(detaching) {
+    			if (detaching) detach_dev(h3);
+    			if (detaching) detach_dev(t1);
+    			if (detaching) detach_dev(div);
+    			destroy_component(layercake);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_fragment$4.name,
+    		type: "component",
+    		source: "",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    const seriesKey = "name";
+    const func = ({ height }) => [0, height / 2];
+
+    function instance$4($$self, $$props, $$invalidate) {
+    	let { $$slots: slots = {}, $$scope } = $$props;
+    	validate_slots('Radar', slots, []);
+
+    	const xKey = [
+    		"Visa",
+    		"Illegally with Coyote",
+    		"National Identity Document",
+    		"Passport, No Visa Required",
+    		"Other",
+    		"Illegally Independently",
+    		"Illegally via Caravans",
+    		"Foreign Residence",
+    		"Papers from Mexico",
+    		"Refuge/Asylum"
+    	];
+
+    	const seriesNames = Object.keys(data[0]).filter(d => d !== seriesKey);
+
+    	data.forEach(d => {
+    		seriesNames.forEach(name => {
+    			d[name] = +d[name];
+    		});
+    	});
+
+    	const writable_props = [];
+
+    	Object_1.keys($$props).forEach(key => {
+    		if (!~writable_props.indexOf(key) && key.slice(0, 2) !== '$$' && key !== 'slot') console.warn(`<Radar> was created with unknown prop '${key}'`);
+    	});
+
+    	$$self.$capture_state = () => ({
+    		LayerCake,
+    		Svg,
+    		scaleLinear: linear,
+    		RadarFill,
+    		RadarAxis,
+    		data,
+    		seriesKey,
+    		xKey,
+    		seriesNames
+    	});
+
+    	return [xKey];
+    }
+
+    class Radar extends SvelteComponentDev {
+    	constructor(options) {
+    		super(options);
+    		init$1(this, options, instance$4, create_fragment$4, safe_not_equal, {});
+
+    		dispatch_dev("SvelteRegisterComponent", {
+    			component: this,
+    			tagName: "Radar",
+    			options,
+    			id: create_fragment$4.name
+    		});
+    	}
+    }
+
+    /* src/components/DotGraph.svelte generated by Svelte v3.58.0 */
+
+    const { console: console_1 } = globals;
+    const file$3 = "src/components/DotGraph.svelte";
+
+    function get_each_context$1(ctx, list, i) {
+    	const child_ctx = ctx.slice();
+    	child_ctx[27] = list[i];
+    	child_ctx[29] = i;
+    	return child_ctx;
+    }
+
+    // (289:2) {#if state > 0}
+    function create_if_block_3$1(ctx) {
+    	let button;
+    	let mounted;
+    	let dispose;
+
+    	const block = {
+    		c: function create() {
+    			button = element("button");
+    			button.textContent = "previous";
+    			add_location(button, file$3, 289, 4, 10015);
+    		},
+    		m: function mount(target, anchor) {
+    			insert_dev(target, button, anchor);
+
+    			if (!mounted) {
+    				dispose = listen_dev(button, "click", /*decreaseState*/ ctx[8], false, false, false, false);
+    				mounted = true;
+    			}
+    		},
+    		p: noop$4,
+    		d: function destroy(detaching) {
+    			if (detaching) detach_dev(button);
+    			mounted = false;
+    			dispose();
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_if_block_3$1.name,
+    		type: "if",
+    		source: "(289:2) {#if state > 0}",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    // (292:2) {#if state < 3}
+    function create_if_block_2$1(ctx) {
+    	let button;
+    	let mounted;
+    	let dispose;
+
+    	const block = {
+    		c: function create() {
+    			button = element("button");
+    			button.textContent = "next";
+    			add_location(button, file$3, 292, 4, 10098);
+    		},
+    		m: function mount(target, anchor) {
+    			insert_dev(target, button, anchor);
+
+    			if (!mounted) {
+    				dispose = listen_dev(button, "click", /*increaseState*/ ctx[7], false, false, false, false);
+    				mounted = true;
+    			}
+    		},
+    		p: noop$4,
+    		d: function destroy(detaching) {
+    			if (detaching) detach_dev(button);
+    			mounted = false;
+    			dispose();
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_if_block_2$1.name,
+    		type: "if",
+    		source: "(292:2) {#if state < 3}",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    // (307:4) {#if state === 1}
+    function create_if_block_1$1(ctx) {
+    	let div2;
+    	let div0;
+    	let t1;
+    	let div1;
+
+    	const block = {
+    		c: function create() {
+    			div2 = element("div");
+    			div0 = element("div");
+    			div0.textContent = "Want To Migrate (Externally)";
+    			t1 = space();
+    			div1 = element("div");
+    			div1.textContent = "Don't Want To Migrate (Externally)";
+    			add_location(div0, file$3, 308, 8, 10475);
+    			add_location(div1, file$3, 309, 8, 10523);
+    			attr_dev(div2, "class", "headers svelte-1jkobs9");
+    			add_location(div2, file$3, 307, 6, 10445);
+    		},
+    		m: function mount(target, anchor) {
+    			insert_dev(target, div2, anchor);
+    			append_dev(div2, div0);
+    			append_dev(div2, t1);
+    			append_dev(div2, div1);
+    		},
+    		d: function destroy(detaching) {
+    			if (detaching) detach_dev(div2);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_if_block_1$1.name,
+    		type: "if",
+    		source: "(307:4) {#if state === 1}",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    // (315:6) {#if state === 3}
+    function create_if_block$1(ctx) {
+    	let g;
+    	let each_value = /*order*/ ctx[2];
+    	validate_each_argument(each_value);
+    	let each_blocks = [];
+
+    	for (let i = 0; i < each_value.length; i += 1) {
+    		each_blocks[i] = create_each_block$1(get_each_context$1(ctx, each_value, i));
+    	}
+
+    	const block = {
+    		c: function create() {
+    			g = svg_element("g");
+
+    			for (let i = 0; i < each_blocks.length; i += 1) {
+    				each_blocks[i].c();
+    			}
+
+    			add_location(g, file$3, 315, 8, 10686);
+    		},
+    		m: function mount(target, anchor) {
+    			insert_dev(target, g, anchor);
+
+    			for (let i = 0; i < each_blocks.length; i += 1) {
+    				if (each_blocks[i]) {
+    					each_blocks[i].m(g, null);
+    				}
+    			}
+    		},
+    		p: function update(ctx, dirty) {
+    			if (dirty & /*columnWidth, paddings, padding_between, categoryNames, order*/ 108) {
+    				each_value = /*order*/ ctx[2];
+    				validate_each_argument(each_value);
+    				let i;
+
+    				for (i = 0; i < each_value.length; i += 1) {
+    					const child_ctx = get_each_context$1(ctx, each_value, i);
+
+    					if (each_blocks[i]) {
+    						each_blocks[i].p(child_ctx, dirty);
+    					} else {
+    						each_blocks[i] = create_each_block$1(child_ctx);
+    						each_blocks[i].c();
+    						each_blocks[i].m(g, null);
+    					}
+    				}
+
+    				for (; i < each_blocks.length; i += 1) {
+    					each_blocks[i].d(1);
+    				}
+
+    				each_blocks.length = each_value.length;
+    			}
+    		},
+    		d: function destroy(detaching) {
+    			if (detaching) detach_dev(g);
+    			destroy_each(each_blocks, detaching);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_if_block$1.name,
+    		type: "if",
+    		source: "(315:6) {#if state === 3}",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    // (317:10) {#each order as category, i}
+    function create_each_block$1(ctx) {
+    	let text_1;
+    	let t_value = /*categoryNames*/ ctx[3][/*category*/ ctx[27]] + "";
+    	let t;
+
+    	const block = {
+    		c: function create() {
+    			text_1 = svg_element("text");
+    			t = text$1(t_value);
+    			attr_dev(text_1, "x", /*columnWidth*/ ctx[6] * (2 * (/*i*/ ctx[29] % 3) + 1) / 2 + /*paddings*/ ctx[5].left + padding_between * (/*i*/ ctx[29] % 3 - 1));
+    			attr_dev(text_1, "y", (/*i*/ ctx[29] - /*i*/ ctx[29] % 3) / 3 * 300 + 15);
+    			attr_dev(text_1, "text-anchor", "middle");
+    			add_location(text_1, file$3, 317, 12, 10741);
+    		},
+    		m: function mount(target, anchor) {
+    			insert_dev(target, text_1, anchor);
+    			append_dev(text_1, t);
+    		},
+    		p: noop$4,
+    		d: function destroy(detaching) {
+    			if (detaching) detach_dev(text_1);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_each_block$1.name,
+    		type: "each",
+    		source: "(317:10) {#each order as category, i}",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    function create_fragment$3(ctx) {
+    	let div0;
+    	let t0;
+    	let t1;
+    	let section;
+    	let div1;
+    	let t2;
+    	let svg;
+    	let g;
+    	let if_block0 = /*state*/ ctx[0] > 0 && create_if_block_3$1(ctx);
+    	let if_block1 = /*state*/ ctx[0] < 3 && create_if_block_2$1(ctx);
+    	let if_block2 = /*state*/ ctx[0] === 1 && create_if_block_1$1(ctx);
+    	let if_block3 = /*state*/ ctx[0] === 3 && create_if_block$1(ctx);
+
+    	const block = {
+    		c: function create() {
+    			div0 = element("div");
+    			if (if_block0) if_block0.c();
+    			t0 = space();
+    			if (if_block1) if_block1.c();
+    			t1 = space();
+    			section = element("section");
+    			div1 = element("div");
+    			if (if_block2) if_block2.c();
+    			t2 = space();
+    			svg = svg_element("svg");
+    			g = svg_element("g");
+    			if (if_block3) if_block3.c();
+    			add_location(div0, file$3, 287, 0, 9987);
+    			add_location(g, file$3, 313, 6, 10648);
+    			attr_dev(svg, "width", /*chartWidth*/ ctx[1]);
+    			attr_dev(svg, "height", /*chartHeight*/ ctx[4]);
+    			add_location(svg, file$3, 312, 4, 10596);
+    			attr_dev(div1, "class", "visualization");
+    			add_location(div1, file$3, 305, 2, 10389);
+    			add_location(section, file$3, 296, 0, 10163);
+    		},
+    		l: function claim(nodes) {
+    			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
+    		},
+    		m: function mount(target, anchor) {
+    			insert_dev(target, div0, anchor);
+    			if (if_block0) if_block0.m(div0, null);
+    			append_dev(div0, t0);
+    			if (if_block1) if_block1.m(div0, null);
+    			insert_dev(target, t1, anchor);
+    			insert_dev(target, section, anchor);
+    			append_dev(section, div1);
+    			if (if_block2) if_block2.m(div1, null);
+    			append_dev(div1, t2);
+    			append_dev(div1, svg);
+    			append_dev(svg, g);
+    			if (if_block3) if_block3.m(svg, null);
+    		},
+    		p: function update(ctx, [dirty]) {
+    			if (/*state*/ ctx[0] > 0) {
+    				if (if_block0) {
+    					if_block0.p(ctx, dirty);
+    				} else {
+    					if_block0 = create_if_block_3$1(ctx);
+    					if_block0.c();
+    					if_block0.m(div0, t0);
+    				}
+    			} else if (if_block0) {
+    				if_block0.d(1);
+    				if_block0 = null;
+    			}
+
+    			if (/*state*/ ctx[0] < 3) {
+    				if (if_block1) {
+    					if_block1.p(ctx, dirty);
+    				} else {
+    					if_block1 = create_if_block_2$1(ctx);
+    					if_block1.c();
+    					if_block1.m(div0, null);
+    				}
+    			} else if (if_block1) {
+    				if_block1.d(1);
+    				if_block1 = null;
+    			}
+
+    			if (/*state*/ ctx[0] === 1) {
+    				if (if_block2) ; else {
+    					if_block2 = create_if_block_1$1(ctx);
+    					if_block2.c();
+    					if_block2.m(div1, t2);
+    				}
+    			} else if (if_block2) {
+    				if_block2.d(1);
+    				if_block2 = null;
+    			}
+
+    			if (/*state*/ ctx[0] === 3) {
+    				if (if_block3) {
+    					if_block3.p(ctx, dirty);
+    				} else {
+    					if_block3 = create_if_block$1(ctx);
+    					if_block3.c();
+    					if_block3.m(svg, null);
+    				}
+    			} else if (if_block3) {
+    				if_block3.d(1);
+    				if_block3 = null;
+    			}
+
+    			if (dirty & /*chartWidth*/ 2) {
+    				attr_dev(svg, "width", /*chartWidth*/ ctx[1]);
+    			}
+    		},
+    		i: noop$4,
+    		o: noop$4,
+    		d: function destroy(detaching) {
+    			if (detaching) detach_dev(div0);
+    			if (if_block0) if_block0.d();
+    			if (if_block1) if_block1.d();
+    			if (detaching) detach_dev(t1);
+    			if (detaching) detach_dev(section);
+    			if (if_block2) if_block2.d();
+    			if (if_block3) if_block3.d();
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_fragment$3.name,
+    		type: "component",
+    		source: "",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    const padding_between = 10;
+    const dotsPerRow = 50;
+
+    function instance$3($$self, $$props, $$invalidate) {
+    	let xScale;
+    	let colorScale;
+    	let xScale2;
+    	let xScale3;
+    	let xScale4;
+    	let colorScaleCategories;
+    	let { $$slots: slots = {}, $$scope } = $$props;
+    	validate_slots('DotGraph', slots, []);
+    	let data = [];
+
+    	let dataByMotivation = {
+    		betterJob: [],
+    		unemployment: [],
+    		lackMoneyNeeds: [],
+    		remittances: [],
+    		lackMoneyFood: [],
+    		adventureTourism: []
+    	};
+
+    	let motivationResponses = {
+    		1: "betterJob",
+    		2: "unemployment",
+    		6: "lackMoneyFood",
+    		7: "lackMoneyNeeds",
+    		8: "remittances",
+    		15: "adventureTourism"
+    	};
+
+    	let dataWithCategories = [];
+    	let order = ["1", "2", "6", "7", "8", "15"]; // to make a 3 x 2 grid
+
+    	let categoryNames = {
+    		1: "Better Job/Salary",
+    		2: "Unemployment",
+    		6: "Money for Food",
+    		7: "Money for Other Basic Needs",
+    		8: "Remittances",
+    		15: "Tourism"
+    	};
+
+    	let doesNotWantMigrateCounter = 0;
+    	let wantsMigrateCounter = 0;
+    	let { chartWidth = 850 } = $$props;
+    	let chartHeight = 600;
+    	let toggle = false;
+    	let { state = 0 } = $$props;
+    	const paddings = { top: 25, left: 25, right: 25, bottom: 50 };
+    	let columnWidth = (chartWidth - paddings.left - paddings.right - 2 * padding_between) / 3;
+    	let categoryDotsPerRow = 20;
+
+    	function yScale(index, rowLength) {
+    		// hard code for now so that we can have fixed distance between dots
+    		// index: index in the array
+    		// row length: how many items per row
+    		return (index - index % rowLength) / rowLength * 9 + paddings.top;
+    	}
+
+    	function xScaleCategories(index, category) {
+    		let placement = order.indexOf(category); // where it should be placed
+    		let col = placement % 3;
+    		let unadjustedX = xScale4(index % categoryDotsPerRow);
+    		return unadjustedX + paddings.left + columnWidth * col + padding_between * (col - 1);
+    	}
+
+    	function yScaleCategories(index, category) {
+    		// place first 3 on first row, second 3 on second row
+    		let placement = order.indexOf(category); // where it should be placed
+
+    		let row = (placement - placement % 3) / 3;
+    		let offset = 300; // arbitrary offset, find a better way to calculate this
+    		return yScale(index, categoryDotsPerRow) + row * offset;
+    	}
+
+    	// TODO: implement this, then move this to case 2
+    	// 			// This should sorta be structured as the following: (at least my 2 AM brain thinks it should be)
+    	// 			// 1. populate dataByMotivations arrays
+    	// 			// 2. Create an XScale for them (this can probably be the same xScale that is then transformed for
+    	// 			//    each thing) --> draw a sketch of this somewhere so you can figure out the right scalings
+    	// 			// 3. Do we want a YScale, or just define what the gap should be between each one? If we do that, we
+    	// 			//    should do that for the previous scales as well
+    	// 			// 4. Assign colors based on our color palette
+    	// 			// 5. Figure out Transitions
+    	// 			// 6. Figure out how to make this entire visualization fit in the screen in the first place
+    	function transition() {
+    		// take 2 because i think the first one is doomed
+    		if (data.length === 0) {
+    			return; // do nothing if there's no data yet
+    		}
+
+    		console.log("Current state", state);
+    		let svg = select("svg").select("g");
+
+    		switch (state) {
+    			case 0:
+    				// first state: all the data displayed
+    				svg.selectAll("circle").data(data).join(enter => enter.append("circle")).transition().duration(250).ease(linear$1).attr("cx", (d, i) => xScale(i % dotsPerRow)).attr("cy", (d, i) => yScale(i, dotsPerRow)).attr("r", 3).attr("opacity", 1).attr("fill", d => colorScale(d["mig_ext_intention"]));
+    				break;
+    			case 1:
+    				// second case: split data into people who want to migrate and people who don't want to migrate
+    				svg.selectAll("circle").data(data).join("circle").transition().duration(250).ease(linear$1).attr("cx", d => d["mig_ext_intention"] === 1
+    				? xScale2(d["ind-2"] % (dotsPerRow / 2))
+    				: xScale3(d["ind-2"] % (dotsPerRow / 2))).attr("cy", d => yScale(d["ind-2"], dotsPerRow / 2)).attr("r", 3).attr("fill", d => colorScale(d["mig_ext_intention"]));
+    				break;
+    			case 2:
+    				// third case: only look at people who want to migrate by removing all people who don't want to migrate
+    				svg.selectAll("circle").filter(d => d["mig_ext_intention"] !== 1).transition().duration(250).ease(linear$1).attr("opacity", 0).remove();
+    				svg.selectAll("circle").data(data.filter(d => d["mig_ext_intention"] === 1)).join("circle").transition().delay(250).duration(250).ease(linear$1).attr("cx", (d, i) => xScale(d["ind-2"] % dotsPerRow)).attr("cy", (d, i) => yScale(d["ind-2"], dotsPerRow)).attr("opacity", 1).attr("fill", d => colorScale(d["mig_ext_intention"]));
+    				break;
+    			case 3:
+    				// fourth case: Separate into different categories based on migration motivation
+    				svg.selectAll("circle").data(dataWithCategories).join("circle").transition().duration(250).ease(linear$1).attr("cx", (d, i) => xScaleCategories(d.categoryIndex, d.category)).attr("cy", (d, i) => yScaleCategories(d.categoryIndex, d.category)).attr("fill", d => colorScaleCategories(d.category));
+    				break;
+    		}
+    	}
+
+    	onMount(async () => {
+    		data = [];
+
+    		for (let i = 0; i < 20; i++) {
+    			data.push({ mig_ext_intention: 1 });
+    		}
+
+    		// data = await d3.csv(
+    		//   "https://raw.githubusercontent.com/lylakirati/MigrationMDT/main/mdt/src/data/main_cleaned.csv"
+    		// );
+    		// data = data.filter((d) => +d["mig_ext_intention"] !== 99);
+    		// for (let d of data) {
+    		//   d["mig_ext_intention"] = +d["mig_ext_intention"];
+    		//   if (d["mig_ext_intention"] === 0) {
+    		//     // set the second index position to the not migrating counter
+    		//     d["ind-2"] = doesNotWantMigrateCounter;
+    		//     doesNotWantMigrateCounter += 1;
+    		//   } else {
+    		//     // set the second index position to the migrating counter
+    		//     d["ind-2"] = wantsMigrateCounter;
+    		//     wantsMigrateCounter += 1;
+    		//     let motivations = d["mig_ext_pref_motivo"].split(" ");
+    		//     for (let motivation of Object.keys(motivationResponses)) {
+    		//       if (motivations.includes(motivation)) {
+    		//         let curArray = dataByMotivation[motivationResponses[motivation]];
+    		//         // todo: refactor to make this more efficient
+    		//         dataWithCategories.push({
+    		//           category: motivation,
+    		//           data: d,
+    		//           categoryIndex: curArray.length,
+    		//         });
+    		//         curArray.push(d); // add to relevant data points
+    		//       }
+    		//     }
+    		//   }
+    		// }
+    		console.log(data);
+
+    		$$invalidate(0, state = 0);
+    		transition();
+    	}); // TODO: populate dataByMotivation to look at the top 5 reasons for migrating
+
+    	//     // hover effect
+    	//   const idContainer = "svg-container-" + Math.random() * 1000000;
+    	//   let mousePosition = { x: null, y: null };
+    	//   let pageMousePosition = { x: null, y: null };
+    	//   let currentHoveredPoint = null;
+    	//   function followMouse(event) {
+    	//     const svg = document.getElementById(idContainer);
+    	//     if (svg === null) return;
+    	//     const dim = svg.getBoundingClientRect();
+    	//     pageMousePosition = {
+    	//       x: event.pageX,
+    	//       y: event.pageY,
+    	//     };
+    	//     const positionInSVG = {
+    	//       x: event.clientX - dim.left,
+    	//       y: event.clientY - dim.top,
+    	//     };
+    	//     mousePosition =
+    	//       positionInSVG.x > paddings.left &&
+    	//       positionInSVG.x < chartWidth - paddings.right &&
+    	//       positionInSVG.y > paddings.top &&
+    	//       positionInSVG.y < chartHeight - paddings.bottom
+    	//         ? { x: positionInSVG.x, y: positionInSVG.y }
+    	//         : { x: null, y: null };
+    	//     computeSelectedXYValue(mousePosition.x, mousePosition.y);
+    	//   }
+    	//   function removePointer() {
+    	//     mousePosition = { x: null, y: null };
+    	//   }
+    	//     function computeSelectedXYValue(xVal, yVal) {
+    	//         currentHoveredPoint =
+    	//             data.filter((d, i) => xScale(i % dotsPerRow) >= xVal && yScale((i - i % dotsPerRow)/dotsPerRow) >= yVal)[0];
+    	//         console.log(xVal, yVal, currentHoveredPoint);
+    	//         return null;
+    	//     }
+    	function increaseState() {
+    		$$invalidate(0, state += 1);
+    	}
+
+    	function decreaseState() {
+    		$$invalidate(0, state -= 1);
+    	}
+
+    	const writable_props = ['chartWidth', 'state'];
+
+    	Object.keys($$props).forEach(key => {
+    		if (!~writable_props.indexOf(key) && key.slice(0, 2) !== '$$' && key !== 'slot') console_1.warn(`<DotGraph> was created with unknown prop '${key}'`);
+    	});
+
+    	$$self.$$set = $$props => {
+    		if ('chartWidth' in $$props) $$invalidate(1, chartWidth = $$props.chartWidth);
+    		if ('state' in $$props) $$invalidate(0, state = $$props.state);
+    	};
+
+    	$$self.$capture_state = () => ({
+    		scaleLinear: linear,
+    		scaleOrdinal: ordinal,
+    		d3,
+    		onMount,
+    		data,
+    		dataByMotivation,
+    		motivationResponses,
+    		dataWithCategories,
+    		order,
+    		categoryNames,
+    		doesNotWantMigrateCounter,
+    		wantsMigrateCounter,
+    		chartWidth,
+    		chartHeight,
+    		toggle,
+    		state,
+    		paddings,
+    		padding_between,
+    		dotsPerRow,
+    		columnWidth,
+    		categoryDotsPerRow,
+    		yScale,
+    		xScaleCategories,
+    		yScaleCategories,
+    		transition,
+    		increaseState,
+    		decreaseState,
+    		colorScaleCategories,
+    		colorScale,
+    		xScale,
+    		xScale3,
+    		xScale2,
+    		xScale4
+    	});
+
+    	$$self.$inject_state = $$props => {
+    		if ('data' in $$props) data = $$props.data;
+    		if ('dataByMotivation' in $$props) dataByMotivation = $$props.dataByMotivation;
+    		if ('motivationResponses' in $$props) motivationResponses = $$props.motivationResponses;
+    		if ('dataWithCategories' in $$props) dataWithCategories = $$props.dataWithCategories;
+    		if ('order' in $$props) $$invalidate(2, order = $$props.order);
+    		if ('categoryNames' in $$props) $$invalidate(3, categoryNames = $$props.categoryNames);
+    		if ('doesNotWantMigrateCounter' in $$props) doesNotWantMigrateCounter = $$props.doesNotWantMigrateCounter;
+    		if ('wantsMigrateCounter' in $$props) wantsMigrateCounter = $$props.wantsMigrateCounter;
+    		if ('chartWidth' in $$props) $$invalidate(1, chartWidth = $$props.chartWidth);
+    		if ('chartHeight' in $$props) $$invalidate(4, chartHeight = $$props.chartHeight);
+    		if ('toggle' in $$props) toggle = $$props.toggle;
+    		if ('state' in $$props) $$invalidate(0, state = $$props.state);
+    		if ('columnWidth' in $$props) $$invalidate(6, columnWidth = $$props.columnWidth);
+    		if ('categoryDotsPerRow' in $$props) $$invalidate(22, categoryDotsPerRow = $$props.categoryDotsPerRow);
+    		if ('colorScaleCategories' in $$props) colorScaleCategories = $$props.colorScaleCategories;
+    		if ('colorScale' in $$props) colorScale = $$props.colorScale;
+    		if ('xScale' in $$props) xScale = $$props.xScale;
+    		if ('xScale3' in $$props) xScale3 = $$props.xScale3;
+    		if ('xScale2' in $$props) xScale2 = $$props.xScale2;
+    		if ('xScale4' in $$props) xScale4 = $$props.xScale4;
+    	};
+
+    	if ($$props && "$$inject" in $$props) {
+    		$$self.$inject_state($$props.$$inject);
+    	}
+
+    	$$self.$$.update = () => {
+    		if ($$self.$$.dirty & /*chartWidth*/ 2) {
+    			// set scaling variables
+    			xScale = linear().domain([0, dotsPerRow]).range([paddings.left, chartWidth - paddings.right / 2]);
+    		}
+
+    		if ($$self.$$.dirty & /*chartWidth*/ 2) {
+    			// for separating into different types of migration
+    			xScale2 = linear().domain([0, dotsPerRow / 2]).range([paddings.left, chartWidth / 2 - padding_between]);
+    		}
+
+    		if ($$self.$$.dirty & /*chartWidth*/ 2) {
+    			xScale3 = linear().domain([0, dotsPerRow / 2]).range([chartWidth / 2 + padding_between, chartWidth - paddings.right]);
+    		}
+
+    		if ($$self.$$.dirty & /*state*/ 1) {
+    			(transition());
+    		}
+    	};
+
+    	colorScale = ordinal().domain([0, 1]).range(["#000", "#65BABD"]);
+    	xScale4 = linear().domain([0, categoryDotsPerRow]).range([0, columnWidth]); // divide into 3 columns, for different categories
+    	colorScaleCategories = ordinal().domain(order).range([" #4FAA5F", "#1C52A3", "#6297D5", "#824936", "#B990EC", "#F8CE6D"]);
+
+    	return [
+    		state,
+    		chartWidth,
+    		order,
+    		categoryNames,
+    		chartHeight,
+    		paddings,
+    		columnWidth,
+    		increaseState,
+    		decreaseState
+    	];
+    }
+
+    class DotGraph extends SvelteComponentDev {
+    	constructor(options) {
+    		super(options);
+    		init$1(this, options, instance$3, create_fragment$3, safe_not_equal, { chartWidth: 1, state: 0 });
+
+    		dispatch_dev("SvelteRegisterComponent", {
+    			component: this,
+    			tagName: "DotGraph",
+    			options,
+    			id: create_fragment$3.name
+    		});
+    	}
+
+    	get chartWidth() {
+    		throw new Error("<DotGraph>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set chartWidth(value) {
+    		throw new Error("<DotGraph>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	get state() {
+    		throw new Error("<DotGraph>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set state(value) {
+    		throw new Error("<DotGraph>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+    }
+
+    var img$1 = "data:image/png;base64,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";
 
     /* src/components/List.svelte generated by Svelte v3.58.0 */
     const file$2 = "src/components/List.svelte";
@@ -26334,7 +31417,7 @@ var app = (function () {
     	return child_ctx;
     }
 
-    // (58:43) 
+    // (62:43) 
     function create_if_block_4(ctx) {
     	let sankey;
     	let current;
@@ -26366,14 +31449,14 @@ var app = (function () {
     		block,
     		id: create_if_block_4.name,
     		type: "if",
-    		source: "(58:43) ",
+    		source: "(62:43) ",
     		ctx
     	});
 
     	return block;
     }
 
-    // (56:38) 
+    // (60:38) 
     function create_if_block_3(ctx) {
     	let pie2;
     	let current;
@@ -26405,38 +31488,38 @@ var app = (function () {
     		block,
     		id: create_if_block_3.name,
     		type: "if",
-    		source: "(56:38) ",
+    		source: "(60:38) ",
     		ctx
     	});
 
     	return block;
     }
 
-    // (54:39) 
+    // (58:39) 
     function create_if_block_2(ctx) {
-    	let pie;
+    	let radar;
     	let current;
-    	pie = new Pie({ $$inline: true });
+    	radar = new Radar({ $$inline: true });
 
     	const block = {
     		c: function create() {
-    			create_component(pie.$$.fragment);
+    			create_component(radar.$$.fragment);
     		},
     		m: function mount(target, anchor) {
-    			mount_component(pie, target, anchor);
+    			mount_component(radar, target, anchor);
     			current = true;
     		},
     		i: function intro(local) {
     			if (current) return;
-    			transition_in(pie.$$.fragment, local);
+    			transition_in(radar.$$.fragment, local);
     			current = true;
     		},
     		o: function outro(local) {
-    			transition_out(pie.$$.fragment, local);
+    			transition_out(radar.$$.fragment, local);
     			current = false;
     		},
     		d: function destroy(detaching) {
-    			destroy_component(pie, detaching);
+    			destroy_component(radar, detaching);
     		}
     	};
 
@@ -26444,53 +31527,35 @@ var app = (function () {
     		block,
     		id: create_if_block_2.name,
     		type: "if",
-    		source: "(54:39) ",
+    		source: "(58:39) ",
     		ctx
     	});
 
     	return block;
     }
 
-    // (52:42) 
+    // (56:42) 
     function create_if_block_1(ctx) {
-    	let barchart2;
-    	let current;
-    	barchart2 = new BarChart2({ $$inline: true });
-
     	const block = {
-    		c: function create() {
-    			create_component(barchart2.$$.fragment);
-    		},
-    		m: function mount(target, anchor) {
-    			mount_component(barchart2, target, anchor);
-    			current = true;
-    		},
-    		i: function intro(local) {
-    			if (current) return;
-    			transition_in(barchart2.$$.fragment, local);
-    			current = true;
-    		},
-    		o: function outro(local) {
-    			transition_out(barchart2.$$.fragment, local);
-    			current = false;
-    		},
-    		d: function destroy(detaching) {
-    			destroy_component(barchart2, detaching);
-    		}
+    		c: noop$4,
+    		m: noop$4,
+    		i: noop$4,
+    		o: noop$4,
+    		d: noop$4
     	};
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
     		id: create_if_block_1.name,
     		type: "if",
-    		source: "(52:42) ",
+    		source: "(56:42) ",
     		ctx
     	});
 
     	return block;
     }
 
-    // (50:6) {#if item.name === "Honduras"}
+    // (54:6) {#if item.name === "Honduras"}
     function create_if_block(ctx) {
     	let barchart;
     	let current;
@@ -26522,27 +31587,30 @@ var app = (function () {
     		block,
     		id: create_if_block.name,
     		type: "if",
-    		source: "(50:6) {#if item.name === \\\"Honduras\\\"}",
+    		source: "(54:6) {#if item.name === \\\"Honduras\\\"}",
     		ctx
     	});
 
     	return block;
     }
 
-    // (45:2) {#each geoData as item, index}
+    // (48:2) {#each geoData as item, index}
     function create_each_block(ctx) {
     	let div;
     	let h2;
     	let t0_value = /*item*/ ctx[4].name + "";
     	let t0;
     	let t1;
-    	let p;
-    	let t2_value = /*item*/ ctx[4].description + "";
+    	let img;
+    	let img_src_value;
     	let t2;
+    	let p;
+    	let t3_value = /*item*/ ctx[4].description + "";
     	let t3;
+    	let t4;
     	let current_block_type_index;
     	let if_block;
-    	let t4;
+    	let t5;
     	let current;
 
     	const if_block_creators = [
@@ -26574,31 +31642,39 @@ var app = (function () {
     			h2 = element("h2");
     			t0 = text$1(t0_value);
     			t1 = space();
+    			img = element("img");
+    			t2 = space();
     			p = element("p");
-    			t2 = text$1(t2_value);
-    			t3 = space();
-    			if (if_block) if_block.c();
+    			t3 = text$1(t3_value);
     			t4 = space();
-    			add_location(h2, file$2, 46, 6, 1323);
-    			add_location(p, file$2, 47, 6, 1350);
+    			if (if_block) if_block.c();
+    			t5 = space();
+    			add_location(h2, file$2, 49, 6, 1456);
+    			attr_dev(img, "class", "round-image");
+    			if (!src_url_equal(img.src, img_src_value = img$1)) attr_dev(img, "src", img_src_value);
+    			attr_dev(img, "alt", "Soledad Castillo");
+    			add_location(img, file$2, 50, 6, 1483);
+    			add_location(p, file$2, 51, 6, 1558);
     			attr_dev(div, "class", "list-item");
     			attr_dev(div, "id", "list-item-" + /*index*/ ctx[6]);
-    			add_location(div, file$2, 45, 4, 1270);
+    			add_location(div, file$2, 48, 4, 1403);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, div, anchor);
     			append_dev(div, h2);
     			append_dev(h2, t0);
     			append_dev(div, t1);
+    			append_dev(div, img);
+    			append_dev(div, t2);
     			append_dev(div, p);
-    			append_dev(p, t2);
-    			append_dev(div, t3);
+    			append_dev(p, t3);
+    			append_dev(div, t4);
 
     			if (~current_block_type_index) {
     				if_blocks[current_block_type_index].m(div, null);
     			}
 
-    			append_dev(div, t4);
+    			append_dev(div, t5);
     			current = true;
     		},
     		p: noop$4,
@@ -26624,7 +31700,7 @@ var app = (function () {
     		block,
     		id: create_each_block.name,
     		type: "each",
-    		source: "(45:2) {#each geoData as item, index}",
+    		source: "(48:2) {#each geoData as item, index}",
     		ctx
     	});
 
@@ -26669,14 +31745,14 @@ var app = (function () {
     				each_blocks[i].c();
     			}
 
-    			add_location(h1, file$2, 40, 4, 1155);
-    			add_location(p, file$2, 41, 4, 1190);
+    			add_location(h1, file$2, 43, 4, 1288);
+    			add_location(p, file$2, 44, 4, 1323);
     			attr_dev(div0, "class", "head");
-    			add_location(div0, file$2, 39, 2, 1132);
+    			add_location(div0, file$2, 42, 2, 1265);
     			attr_dev(div1, "class", "separator");
-    			add_location(div1, file$2, 43, 2, 1207);
+    			add_location(div1, file$2, 46, 2, 1340);
     			attr_dev(div2, "id", "list-items");
-    			add_location(div2, file$2, 38, 0, 1091);
+    			add_location(div2, file$2, 41, 0, 1224);
     		},
     		l: function claim(nodes) {
     			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
@@ -26701,7 +31777,7 @@ var app = (function () {
     			current = true;
     		},
     		p: function update(ctx, [dirty]) {
-    			if (dirty & /*geoData*/ 0) {
+    			if (dirty & /*geoData, soledadIcon*/ 0) {
     				each_value = geoData;
     				validate_each_argument(each_value);
     				let i;
@@ -26818,6 +31894,9 @@ var app = (function () {
     		Sankey,
     		BarChart,
     		BarChart2,
+    		Radar,
+    		DotGraph,
+    		soledadIcon: img$1,
     		list,
     		unsubscribeActiveListItem,
     		$activeMapItem
@@ -26860,7 +31939,7 @@ var app = (function () {
     		c: function create() {
     			div = element("div");
     			attr_dev(div, "id", "map");
-    			add_location(div, file$1, 71, 0, 1735);
+    			add_location(div, file$1, 76, 0, 1823);
     		},
     		l: function claim(nodes) {
     			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
@@ -26912,7 +31991,8 @@ var app = (function () {
     				center: [-87.204, 14.101],
     				zoom: 7, // starting zoom level
     				minZoom: 0,
-    				maxZoom: 15
+    				maxZoom: 15,
+    				pan: { animate: true, duration: 5 }
     			});
 
     		map.on("load", () => {
@@ -26945,7 +32025,8 @@ var app = (function () {
     	const unsubscribeActiveMapItem = activeMapItem.subscribe(newActiveMapItem => {
     		if (map) {
     			map.flyTo({
-    				center: geoData[newActiveMapItem].coordinates
+    				center: geoData[newActiveMapItem].coordinates,
+    				speed: 0.5
     			});
     		}
     	});
@@ -27018,11 +32099,11 @@ var app = (function () {
     			div1 = element("div");
     			create_component(list.$$.fragment);
     			attr_dev(div0, "class", "pane left");
-    			add_location(div0, file, 7, 2, 163);
+    			add_location(div0, file, 6, 2, 116);
     			attr_dev(div1, "class", "pane right");
-    			add_location(div1, file, 10, 2, 210);
+    			add_location(div1, file, 9, 2, 163);
     			attr_dev(div2, "class", "container");
-    			add_location(div2, file, 6, 0, 137);
+    			add_location(div2, file, 5, 0, 90);
     		},
     		l: function claim(nodes) {
     			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
@@ -27075,7 +32156,7 @@ var app = (function () {
     		if (!~writable_props.indexOf(key) && key.slice(0, 2) !== '$$' && key !== 'slot') console.warn(`<App> was created with unknown prop '${key}'`);
     	});
 
-    	$$self.$capture_state = () => ({ List, Map: Map$1, Sankey });
+    	$$self.$capture_state = () => ({ List, Map: Map$1 });
     	return [];
     }
 

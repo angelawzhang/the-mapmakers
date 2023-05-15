@@ -71,7 +71,7 @@
   $: barWidth = innerWidth / 9; //magic num 9 instead of xTicks.length
 </script>
 
-<h2>Violence Encounters</h2>
+<h3>Violence Encounters</h3>
 <!-- <button on:click={updateData}>
 	toggle
 </button> -->

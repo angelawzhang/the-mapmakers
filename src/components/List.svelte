@@ -10,6 +10,7 @@
   import BarChart2 from "./BarChart2.svelte";
   import Radar from "./Radar.svelte";
   import DotGraph from "./DotGraph.svelte";
+  import soledadIcon from "../assets/soledad.png";
 
   let list;
   onMount(async () => {
@@ -47,6 +48,7 @@
   {#each geoData as item, index}
     <div class="list-item" id="list-item-{index}">
       <h2>{item.name}</h2>
+      <img class="round-image" src={soledadIcon} alt="Soledad Castillo" />
       <p>{item.description}</p>
       <!-- Add Svelte components for each section here; add additional ifs accordingly -->
       {#if item.name === "Honduras"}

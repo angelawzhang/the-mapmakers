@@ -44,7 +44,7 @@
   }
 </script>
 
-<h2 style="margin-top: 15px">Migration Succeeded or Failed?</h2>
+<h3 style="margin-top: 15px">Migration Succeeded or Failed?</h3>
 <div class="visualization">
   <svg width="500" height="500">
     <g transform="translate(250, 120)">

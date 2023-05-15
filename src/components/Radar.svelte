@@ -30,7 +30,7 @@
   });
 </script>
 
-<h2>Legal vs. Illegal Migration</h2>
+<h3>Legal vs. Illegal Migration</h3>
 
 <div class="chart-container">
   <LayerCake

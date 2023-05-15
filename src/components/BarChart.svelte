@@ -166,7 +166,7 @@
   $: barWidth = innerWidth / 9; //magic num 9 instead of xTicks.length
 </script>
 
-<h2>Migration Motivations</h2>
+<h3>Migration Motivations</h3>
 <div>
   <button on:click={updateData}> {getButtonString(showAll)} </button>
 </div>

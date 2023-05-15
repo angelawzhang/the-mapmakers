@@ -65,7 +65,7 @@
   }
 </script>
 
-<h2 style="margin-top: 15px">Legal vs. Illegal Migration</h2>
+<h3 style="margin-top: 15px">Legal vs. Illegal Migration</h3>
 <div class="visualization">
   <svg width="500" height="500">
     <g transform="translate(250, 120)">
