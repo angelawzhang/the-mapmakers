@@ -8,6 +8,7 @@
   import Sankey from "./Sankey/Sankey.svelte";
   import BarChart from "./BarChart.svelte";
   import BarChart2 from "./BarChart2.svelte";
+  import Radar from "./Radar.svelte";
   import DotGraph from "./DotGraph.svelte";
 
   let list;
@@ -53,7 +54,7 @@
       {:else if item.name === "Guatemala"}
         <DotGraph />
       {:else if item.name === "Mexico"}
-        <Pie />
+        <Radar />
       {:else if item.name === "Texas"}
         <Pie2 />
       {:else if item.name === "California"}

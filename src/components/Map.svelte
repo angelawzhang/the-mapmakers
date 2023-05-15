@@ -30,6 +30,10 @@
       zoom: 7, // starting zoom level
       minZoom: 0,
       maxZoom: 15,
+      pan: {
+        animate: true,
+        duration: 5,
+      },
     });
     map.on("load", () => {
       map.loadImage(personIcon, (error, image) => {
@@ -61,6 +65,7 @@
       if (map) {
         map.flyTo({
           center: geoData[newActiveMapItem].coordinates,
+          speed: 0.5,
         });
       }
     }
