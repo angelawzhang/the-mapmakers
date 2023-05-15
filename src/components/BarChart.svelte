@@ -4,15 +4,35 @@
   import * as d3 from "d3";
 
   let points = [
-    { id: 1, reason: "Better job", numOfHouseholds: 1239 },
-    { id: 2, reason: "Unemployment", numOfHouseholds: 618 },
-    { id: 3, reason: "Money for other", numOfHouseholds: 351 },
-    { id: 4, reason: "Remittances", numOfHouseholds: 277 },
-    { id: 5, reason: "Money for food", numOfHouseholds: 234 },
-    { id: 6, reason: "Fam reunification", numOfHouseholds: 137 },
-    { id: 7, reason: "Unsafety", numOfHouseholds: 118 },
-    { id: 8, reason: "For Study", numOfHouseholds: 80 },
-    { id: 9, reason: "Other", numOfHouseholds: 70 },
+    {
+      id: 1,
+      reason: "💼",
+      description: "Search for better job",
+      numOfHouseholds: 1239,
+    },
+    { id: 2, reason: "👔", description: "Unemployment", numOfHouseholds: 618 },
+    {
+      id: 3,
+      reason: "💸",
+      description: "Money for other",
+      numOfHouseholds: 351,
+    },
+    { id: 4, reason: "💰", description: "Remittances", numOfHouseholds: 277 },
+    {
+      id: 5,
+      reason: "🥙",
+      description: "Money for food",
+      numOfHouseholds: 234,
+    },
+    {
+      id: 6,
+      reason: "👨‍👩‍👦‍👦",
+      description: "Fam reunification",
+      numOfHouseholds: 137,
+    },
+    { id: 7, reason: "⚠️", description: "Unsafety", numOfHouseholds: 118 },
+    { id: 8, reason: "📚", description: "For Study", numOfHouseholds: 80 },
+    { id: 9, reason: "❓", description: "Other", numOfHouseholds: 70 },
   ];
 
   $: reasons = points.map((d) => d.reason);
@@ -21,7 +41,7 @@
   const padding = { top: 20, right: 15, bottom: 20, left: 25 };
 
   let width = 500;
-  let height = 200;
+  let height = 500;
 
   let hovered = -1;
   let recorded_mouse_position = {
@@ -35,28 +55,98 @@
     return "'" + tick.toString().slice(-2);
   }
 
+  function getButtonString(showAll) {
+    if (showAll) {
+      return "Show only top 5";
+    } else {
+      return "Show all";
+    }
+  }
+
   function updateData() {
     if (showAll) {
-      points = points.map((d) => ({
-        ...d,
-        numOfHouseholds: d.numOfHouseholds > 200 ? d.numOfHouseholds : 0,
-      }));
-      const timeout = setTimeout(() => {
-        points = points.filter((d) => d.numOfHouseholds > 200);
-      }, 200);
+      points = [
+        {
+          id: 1,
+          reason: "Search for better job",
+          description: "Search for better job",
+          numOfHouseholds: 1239,
+        },
+        {
+          id: 2,
+          reason: "Unemployment",
+          description: "Unemployment",
+          numOfHouseholds: 618,
+        },
+        {
+          id: 3,
+          reason: "Money for other",
+          description: "Money for other",
+          numOfHouseholds: 351,
+        },
+        {
+          id: 4,
+          reason: "Remittances",
+          description: "Remittances",
+          numOfHouseholds: 277,
+        },
+        {
+          id: 5,
+          reason: "Money to buy food",
+          description: "Money to buy food",
+          numOfHouseholds: 234,
+        },
+      ];
+      // points = points.map((d) => ({
+      //   ...d,
+      //   numOfHouseholds: d.numOfHouseholds > 200 ? d.numOfHouseholds : 0,
+      // }));
+      // const timeout = setTimeout(() => {
+      //   points = points.filter((d) => d.numOfHouseholds > 200);
+      // }, 200);
 
       showAll = false;
     } else {
       points = [
-        { id: 1, reason: "Search for better job", numOfHouseholds: 1239 },
-        { id: 2, reason: "Unemployment", numOfHouseholds: 618 },
-        { id: 3, reason: "Money for other", numOfHouseholds: 351 },
-        { id: 4, reason: "Remittances", numOfHouseholds: 277 },
-        { id: 5, reason: "Money to buy food", numOfHouseholds: 234 },
-        { id: 6, reason: "Fam reunification", numOfHouseholds: 137 },
-        { id: 7, reason: "Unsafety", numOfHouseholds: 118 },
-        { id: 8, reason: "For Study", numOfHouseholds: 80 },
-        { id: 9, reason: "Other", numOfHouseholds: 70 },
+        {
+          id: 1,
+          reason: "💼",
+          description: "Search for better job",
+          numOfHouseholds: 1239,
+        },
+        {
+          id: 2,
+          reason: "👔",
+          description: "Unemployment",
+          numOfHouseholds: 618,
+        },
+        {
+          id: 3,
+          reason: "💸",
+          description: "Money for other",
+          numOfHouseholds: 351,
+        },
+        {
+          id: 4,
+          reason: "💰",
+          description: "Remittances",
+          numOfHouseholds: 277,
+        },
+        {
+          id: 5,
+          reason: "🥙",
+          description: "Money for food",
+          numOfHouseholds: 234,
+        },
+        {
+          id: 6,
+          reason: "👨‍👩‍👦‍👦",
+          description: "Fam reunification",
+          numOfHouseholds: 137,
+        },
+        { id: 7, reason: "⚠️", description: "Unsafety", numOfHouseholds: 118 },
+        { id: 8, reason: "📚", description: "For Study", numOfHouseholds: 80 },
+        { id: 9, reason: "❓", description: "Other", numOfHouseholds: 70 },
       ];
 
       showAll = true;
@@ -78,7 +168,7 @@
 
 <h2>Migration Motivations</h2>
 <div>
-  <button on:click={updateData}> toggle </button>
+  <button on:click={updateData}> {getButtonString(showAll)} </button>
 </div>
 
 <div class="chart" bind:clientWidth={width} bind:clientHeight={height}>
@@ -146,15 +236,19 @@
     {#if hovered !== -1}
       <p>
         {points[hovered].numOfHouseholds} households main reason of migration was:
-        {points[hovered].reason}
+        {points[hovered].description}
       </p>
     {/if}
   </div>
 </div>
 <div>
-  {#if showAll == false}
-    <p class="center-text">The top 5 reasons of migration are financial!</p>
-  {/if}
+  <p>
+    What are some factors that are causing people to migrate from the Northern
+    Triangle? The top 5 reasons of migration, which makes up 89% of the
+    households that responded to the survey, are all due to financial reasons,
+    including searching for a better job or hoping to get more money for food
+    and other basic necessities.
+  </p>
 </div>
 
 <style>
@@ -163,5 +257,12 @@
     fill: #a11;
     stroke: none;
     opacity: 0.65;
+  }
+
+  .y-axis-label {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
   }
 </style>

@@ -9,6 +9,7 @@
   import BarChart from "./BarChart.svelte";
   import BarChart2 from "./BarChart2.svelte";
   import Radar from "./Radar.svelte";
+  import DotGraph from "./DotGraph.svelte";
 
   let list;
   onMount(async () => {
@@ -68,7 +69,7 @@
       {#if item.name === "Honduras"}
         <BarChart />
       {:else if item.name === "Guatemala"}
-        <BarChart2 />
+        <!-- <DotGraph /> -->
       {:else if item.name === "Mexico"}
         <Radar />
       {:else if item.name === "Texas"}
