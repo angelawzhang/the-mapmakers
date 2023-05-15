@@ -155,16 +155,16 @@
 
 <div>
   {#if state > 0}
-    <button class="button-4" on:click={decreaseState}> previous </button>
+    <button class="button" on:click={decreaseState}> previous </button>
   {:else}
-    <button class="button-4" disabled="true" on:click={decreaseState}>
+    <button class="button" disabled="true" on:click={decreaseState}>
       previous
     </button>
   {/if}
   {#if state < 2}
-    <button class="button-4" on:click={increaseState}> next </button>
+    <button class="button" on:click={increaseState}> next </button>
   {:else}
-    <button class="button-4" disabled="true" on:click={increaseState}>
+    <button class="button" disabled="true" on:click={increaseState}>
       next
     </button>
   {/if}

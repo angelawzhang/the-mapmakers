@@ -168,7 +168,7 @@
 
 <h3>Migration Motivations</h3>
 <div>
-  <button class="button-4" on:click={updateData}>
+  <button class="button" on:click={updateData}>
     {getButtonString(showAll)}
   </button>
 </div>
