@@ -3,11 +3,9 @@
   import inView from "in-view";
   import { geoData } from "./const.js";
   import { activeListItem, activeMapItem } from "./states.js";
-  import Pie from "./Pie.svelte";
   import Pie2 from "./Pie2.svelte";
   import Sankey from "./Sankey/Sankey.svelte";
   import BarChart from "./BarChart.svelte";
-  import BarChart2 from "./BarChart2.svelte";
   import Radar from "./Radar.svelte";
   import DotGraph from "./DotGraph.svelte";
   import soledadIcon from "../assets/soledad.png";
@@ -111,8 +109,24 @@
     <h1 class="head-title">What will you do?</h1>
     <div class="separator" />
     <p class="head-text">Made by Angela Zhang, Anna Sun, and Julie Meng</p>
-    <p class="head-text">Sources</p>
-    <p class="source">asdf</p>
-    <p class="source">asdf</p>
+    <p class="head-text">
+      This data visualization was made with data contributed by the United
+      Nations World Food Programme (WFP).
+    </p>
+    <p class="head-text">Other Sources</p>
+    <a href="https://doi.org/10.1177/01979183221118911">
+      Torre Cantalapiedra, E. (2022). Criminal Victimization of Central American
+      Migrants in Transit Through Mexico. International Migration Review, 0(0).
+    </a>
+
+    <a href="https://oprdata.princeton.edu/archive/LAMP/">
+      Princeton University. Latin American Migration Project.
+    </a>
+
+    <a
+      href="https://www.nieknijland.nl/blog/how-to-highlight-countries-with-mapbox"
+      >Nick Nijland. How to highlight countries with Mapbox.</a
+    >
+    <!-- <a href=""></a> -->
   </div>
 </div>

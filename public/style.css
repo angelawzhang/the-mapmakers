@@ -200,11 +200,12 @@ body {
     align-items: center;
   }
 
-  .source {
+ a {
     font-size: 12px;
     text-align: center;
     margin: 0 0 0 0;
     color: #d6deec;
+    font-family: "Lato", sans-serif;
   }
 
   h1 {
