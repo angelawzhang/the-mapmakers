@@ -190,6 +190,23 @@ body {
     max-width: 80%;
   }
 
+  .footer {
+    display: flex;
+    flex-direction: column;
+    scroll-snap-align: none;
+    background-color: #223960;
+    min-height: 100%;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .source {
+    font-size: 12px;
+    text-align: center;
+    margin: 0 0 0 0;
+    color: #d6deec;
+  }
+
   h1 {
     font-size: 3.4em;
     color: #67923D
@@ -205,7 +222,7 @@ body {
   h3 {
     font-size: 1.5em;
     margin-top: 0.4em;
-    color:#67923D;
+    color:#41572b;
     text-align: center;
   }
 
@@ -370,14 +387,40 @@ svg {
 
 /* Dot Graph */
 
-.dot-title {
+.dot-title-big {
   display: flex;
   flex-direction: row;
-  justify-content: space-between;
+  justify-content: space-around;
   font-family: "Lato", sans-serif;
   font-size: 0.8em;
   color:#24292E;
   width: 600px;
   align-content: center;
   align-items: center;
+  margin-bottom: 0.1em;
+}
+
+.dot-title {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-around;
+  font-family: "Lato", sans-serif;
+  font-size: 0.7em;
+  color:#24292E;
+  width: 600px;
+  align-content: center;
+  align-items: center;
+}
+
+.dot-visualization {
+  font: 25px sans-serif;
+  margin: auto;
+  margin-top: 10px;
+  text-align: middle;
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  align-content: center;
 }

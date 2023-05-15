@@ -5,44 +5,13 @@
   import { onMount } from "svelte";
 
   let data = [];
-  let dataByMotivation = {
-    betterJob: [],
-    unemployment: [],
-    lackMoneyNeeds: [],
-    remittances: [],
-    lackMoneyFood: [],
-    adventureTourism: [],
-  };
 
-  let motivationResponses = {
-    1: "betterJob",
-    2: "unemployment",
-    6: "lackMoneyFood",
-    7: "lackMoneyNeeds",
-    8: "remittances",
-    15: "adventureTourism",
-  };
-
-  let dataWithCategories = [];
-
-  let order = ["1", "2", "6", "7", "8", "15"]; // to make a 3 x 2 grid
-
-  let categoryNames = {
-    1: "Better Job/Salary",
-    2: "Unemployment",
-    6: "Money for Food",
-    7: "Money for Other Basic Needs",
-    8: "Remittances",
-    15: "Tourism",
-  };
-
-  let doesNotWantMigrateCounter = 0;
-  let wantsMigrateCounter = 0;
+  let withCoyoteCounter = 0;
+  let withoutCoyoteCounter = 0;
 
   // set general use variables
-  export let chartWidth = 600;
-  let chartHeight = 400;
-  let toggle = false;
+  export let chartWidth = 550;
+  let chartHeight = 200;
   export let state = 0; // state of the visualization
 
   const paddings = {
@@ -72,12 +41,9 @@
   $: xScale = scaleLinear()
     .domain([0, dotsPerRow])
     .range([paddings.left, chartWidth - paddings.right / 2]);
-  // $: yScale = scaleLinear()
-  // 	.domain([0, (data.length - (data.length % dotsPerRow)) / dotsPerRow])
-  // 	.range([paddings.top, chartHeight - paddings.bottom]);
-  $: colorScale = scaleOrdinal().domain([0, 1]).range(["#000", "#65BABD"]);
+  $: colorScale = scaleOrdinal().domain([0, 1]).range(["#67923D", "#4997D0"]);
 
-  // for separating into different types of migration
+  // with or without coyote use
   $: xScale2 = scaleLinear()
     .domain([0, dotsPerRow / 2])
     .range([paddings.left, chartWidth / 2 - padding_between]);
@@ -87,39 +53,9 @@
 
   let columnWidth =
     (chartWidth - paddings.left - paddings.right - 2 * padding_between) / 3;
-  let categoryDotsPerRow = 20;
-  $: xScale4 = scaleLinear() // divide into 3 columns, for different categories
-    .domain([0, categoryDotsPerRow])
-    .range([0, columnWidth]);
-  $: colorScaleCategories = scaleOrdinal()
-    .domain(order)
-    .range([" #4FAA5F", "#1C52A3", "#6297D5", "#824936", "#B990EC", "#F8CE6D"]);
 
   function yScale(index, rowLength) {
-    // hard code for now so that we can have fixed distance between dots
-    // index: index in the array
-    // row length: how many items per row
     return ((index - (index % rowLength)) / rowLength) * 9 + paddings.top;
-  }
-
-  function xScaleCategories(index, category) {
-    let placement = order.indexOf(category); // where it should be placed
-    let col = placement % 3;
-    let unadjustedX = xScale4(index % categoryDotsPerRow);
-    return (
-      unadjustedX +
-      paddings.left +
-      columnWidth * col +
-      padding_between * (col - 1)
-    );
-  }
-
-  function yScaleCategories(index, category) {
-    // place first 3 on first row, second 3 on second row
-    let placement = order.indexOf(category); // where it should be placed
-    let row = (placement - (placement % 3)) / 3;
-    let offset = 300; // arbitrary offset, find a better way to calculate this
-    return yScale(index, categoryDotsPerRow) + row * offset;
   }
 
   function transition() {
@@ -196,12 +132,12 @@
       d["with_coyote"] = +d["with_coyote"];
       if (d["with_coyote"] === 0) {
         // set the second index position to the not migrating counter
-        d["ind-2"] = doesNotWantMigrateCounter;
-        doesNotWantMigrateCounter += 1;
+        d["ind-2"] = withCoyoteCounter;
+        withCoyoteCounter += 1;
       } else {
         // set the second index position to the migrating counter
-        d["ind-2"] = wantsMigrateCounter;
-        wantsMigrateCounter += 1;
+        d["ind-2"] = withoutCoyoteCounter;
+        withoutCoyoteCounter += 1;
       }
     }
     console.log(data);
@@ -235,9 +171,9 @@
 </div>
 
 <section>
-  <div class="visualization">
+  <div class="dot-visualization">
     {#if state === 0}
-      <div class="headers dot-title">
+      <div class="headers dot-title-big">
         <div>All Migrants</div>
       </div>
     {/if}
@@ -248,8 +184,12 @@
       </div>
     {/if}
     {#if state === 2}
-      <div class="headers dot-title">
+      <div class="headers dot-title-big">
         <div class="center-text">Violence Experienced</div>
+      </div>
+      <div class="headers dot-title">
+        <div>Migrated with Coyote</div>
+        <div>Migrated Independently</div>
       </div>
     {/if}
     <svg class="dot-graph" width={chartWidth} height={chartHeight}>
@@ -270,6 +210,16 @@
         </g>
       {/if}
     </svg>
+  </div>
+  <div>
+    <p>
+      Many migrants choose to travel with a coyote, and one reason for this
+      decision is to decrease the probability that they face violence during
+      their migration journey. In the above visualization, migrants had violent
+      encounters over twice as often when traveling without a coyote. However,
+      in the 2018 and 2019 Surveys on Migration from the Southern Border of
+      Mexico, coyotes were the perpetrators of crime 9.1% of the time.
+    </p>
   </div>
 </section>
 

@@ -101,4 +101,13 @@
       {/if}
     </div>
   {/each}
+
+  <div class="footer">
+    <h1 class="head-title">What will you do?</h1>
+    <div class="separator" />
+    <p class="head-text">Made by Angela Zhang, Anna Sun, and Julie Meng</p>
+    <p class="head-text">Sources</p>
+    <p class="source">asdf</p>
+    <p class="source">asdf</p>
+  </div>
 </div>
