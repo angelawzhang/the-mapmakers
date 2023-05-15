@@ -15,13 +15,20 @@
   let list;
   onMount(async () => {
     inView.offset(200);
+    activeMapItem.set(-1);
     list.addEventListener("scroll", () => {
       const visibleListItems = Array.from(
         document.getElementsByClassName("list-item")
       ).map(inView.is);
-      const topMostVisible = visibleListItems.indexOf(true);
-      if (topMostVisible !== $activeMapItem) {
-        activeMapItem.set(topMostVisible);
+      if (
+        Array.from(document.getElementsByClassName("head")).map(inView.is)[0]
+      ) {
+        activeMapItem.set(-1);
+      } else {
+        const topMostVisible = visibleListItems.indexOf(true);
+        if (topMostVisible !== $activeMapItem) {
+          activeMapItem.set(topMostVisible);
+        }
       }
     });
   });
@@ -41,10 +48,20 @@
 
 <div id="list-items" bind:this={list}>
   <div class="head">
-    <h1>The Migration Journey</h1>
-    <p />
+    <h1 class="head-title">The Migration Journey</h1>
+    <div class="separator" />
+    <p class="head-text">
+      Extreme violence and poverty in Central America over the past decade has
+      forced millions of people to be uprooted from their homes, and conditions
+      are only getting worse — many risk their lives undertaking dangerous
+      journeys to get to their destination.
+    </p>
+    <p class="head-text">
+      Follow the true story of a Honduran migrant and learn more about the
+      countless hardships endured along the way.
+    </p>
   </div>
-  <div class="separator" />
+  <!-- <div class="separator" /> -->
   {#each geoData as item, index}
     <div class="list-item" id="list-item-{index}">
       <h2>{item.name}</h2>
