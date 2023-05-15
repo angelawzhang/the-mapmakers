@@ -133,7 +133,7 @@ body {
   .list-item {
     /* font-size: 1.2em;
     line-height: 1.5em; */
-    scroll-snap-align: start;
+    /* scroll-snap-align: start; */
     padding: 40px;
     width: 85%;
     /* height: 100%; */
@@ -264,6 +264,11 @@ body {
 svg {
   width: 90%;
   height: 90%;
+}
+
+.pie-svg {
+  width: 50%;
+  height: 40%;
 }
 
 /* Sankey */

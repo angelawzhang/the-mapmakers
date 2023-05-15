@@ -13,6 +13,7 @@
   import coyoteIcon from "../assets/coyote.png";
   import desertIcon from "../assets/desert.png";
   import gradIcon from "../assets/grad.jpeg";
+  import PopulationPlot from "./PopulationPlot.svelte";
 
   let list;
   onMount(async () => {
@@ -76,7 +77,8 @@
       {:else if item.name === "Guatemala"}
         <img class="round-image" src={busIcon} alt="destroyed bus" />
         <p>{item.description}</p>
-        <DotGraph />
+        <!-- <DotGraph /> -->
+        <PopulationPlot />
         <div class="separator" />
       {:else if item.name === "Mexico"}
         <img

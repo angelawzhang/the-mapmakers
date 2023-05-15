@@ -168,7 +168,7 @@
 
 <h3>Migration Motivations</h3>
 <div>
-  <button class="button" on:click={updateData}>
+  <button class="button-4" on:click={updateData}>
     {getButtonString(showAll)}
   </button>
 </div>
@@ -233,7 +233,7 @@
   <div
     class={hovered === -1 ? "tooltip-hidden" : "tooltip-visible"}
     style="left: {recorded_mouse_position.x -
-      1000}px; top: {recorded_mouse_position.y - 400}px"
+      800}px; top: {recorded_mouse_position.y - 400}px"
   >
     {#if hovered !== -1}
       <p>

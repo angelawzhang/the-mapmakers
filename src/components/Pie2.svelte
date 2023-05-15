@@ -46,7 +46,7 @@
 
 <h3 style="margin-top: 15px">Migration Succeeded or Failed?</h3>
 <div class="visualization">
-  <svg width="500" height="500">
+  <svg class="pie-svg" viewBox="0 0 400 300" transform="translate(100, 0)">
     <g transform="translate(250, 120)">
       {#each arc_data as data, index}
         <path

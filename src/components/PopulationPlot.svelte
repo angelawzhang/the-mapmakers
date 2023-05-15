@@ -67,41 +67,43 @@
     switch (state) {
       case 0: // all migrants
         svg
-          .selectAll("circle")
+          .selectAll("rect")
           .data(data)
-          .join((enter) => enter.append("circle"))
+          .join((enter) => enter.append("rect"))
           .transition()
           .duration(250)
           .ease(d3.easeLinear)
-          .attr("cx", (d, i) => xScale(i % dotsPerRow))
-          .attr("cy", (d, i) => yScale(i, dotsPerRow))
-          .attr("r", 3)
+          .attr("x", (d, i) => xScale(i % dotsPerRow))
+          .attr("y", (d, i) => yScale(i, dotsPerRow))
+          .attr("width", 5)
+          .attr("height", 5)
           .attr("opacity", 1)
           .attr("fill", (d) => colorScale(d["with_coyote"]));
         break;
       case 1: // split into coyote and no coyote
         svg
-          .selectAll("circle")
+          .selectAll("rect")
           .data(data)
-          .join("circle")
+          .join("rect")
           .transition()
-          .duration(250)
+          .duration(400)
           .ease(d3.easeLinear)
-          .attr("cx", (d) =>
+          .attr("x", (d) =>
             d["with_coyote"] === 1
               ? xScale2(d["ind-2"] % (dotsPerRow / 2))
               : xScale3(d["ind-2"] % (dotsPerRow / 2))
           )
-          .attr("cy", (d) => yScale(d["ind-2"], dotsPerRow / 2))
-          .attr("r", 3)
+          .attr("y", (d) => yScale(d["ind-2"], dotsPerRow / 2))
+          .attr("width", 5)
+          .attr("height", 5)
           .attr("fill", (d) => colorScale(d["with_coyote"]));
         break;
       case 2: // color violence red
         svg
-          .selectAll("circle")
+          .selectAll("rect")
           .filter((d) => d["violence"] == 1)
           .transition()
-          .duration(250)
+          .duration(400)
           .ease(d3.easeLinear)
           .attr("opacity", 1)
           .attr("fill", "red");
@@ -155,16 +157,16 @@
 
 <div>
   {#if state > 0}
-    <button class="button-4" on:click={decreaseState}> previous </button>
+    <button class="button" on:click={decreaseState}> previous </button>
   {:else}
-    <button class="button-4" disabled="true" on:click={decreaseState}>
+    <button class="button" disabled="true" on:click={decreaseState}>
       previous
     </button>
   {/if}
   {#if state < 2}
-    <button class="button-4" on:click={increaseState}> next </button>
+    <button class="button" on:click={increaseState}> next </button>
   {:else}
-    <button class="button-4" disabled="true" on:click={increaseState}>
+    <button class="button" disabled="true" on:click={increaseState}>
       next
     </button>
   {/if}
@@ -220,7 +222,6 @@
       in the 2018 and 2019 Surveys on Migration from the Southern Border of
       Mexico, coyotes were the perpetrators of crime 9.1% of the time.
     </p>
-    <p />
   </div>
 </section>
 
