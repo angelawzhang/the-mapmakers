@@ -88,21 +88,23 @@
 </script>
 
 <div>
-  <h2 style="margin-top: 15px">
+  <h3 style="margin-top: 15px">
     Occupations Before and After Migrating to Another Country
-  </h2>
+  </h3>
 
   <div>
     <p class="center-text">
       This Sankey diagram shows the occupations of migrants before and after
-      migrating to from the Northern Triangle to another country. The thickness of the links represents the
-      number of migrants. Hover over a node to see the number of migrants in
-      that occupation. Hover over a link to see the number of migrants who
-      changed from one occupation to another.
+      migrating to from the Northern Triangle to another country. The thickness
+      of the links represents the number of migrants. Hover over a node to see
+      the number of migrants in that occupation. Hover over a link to see the
+      number of migrants who changed from one occupation to another.
 
       <br /><br />
 
-      Though most migrants like Soledad are making the journey due to financial instability at home, job peospects after migration are not significantly better.
+      Though most migrants like Soledad are making the journey due to financial
+      instability at home, job peospects after migration are not significantly
+      better.
     </p>
   </div>
 
@@ -206,7 +208,6 @@
 
   <div class="measure" bind:offsetWidth={width} bind:offsetHeight={height} />
 </div>
-
 
 <style>
   .graph {

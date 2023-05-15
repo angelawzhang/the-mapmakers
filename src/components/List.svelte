@@ -11,6 +11,10 @@
   import Radar from "./Radar.svelte";
   import DotGraph from "./DotGraph.svelte";
   import soledadIcon from "../assets/soledad.png";
+  import busIcon from "../assets/bus.png";
+  import coyoteIcon from "../assets/coyote.png";
+  import desertIcon from "../assets/desert.png";
+  import gradIcon from "../assets/grad.jpeg";
 
   let list;
   onMount(async () => {
@@ -65,18 +69,34 @@
   {#each geoData as item, index}
     <div class="list-item" id="list-item-{index}">
       <h2>{item.name}</h2>
-      <img class="round-image" src={soledadIcon} alt="Soledad Castillo" />
-      <p>{item.description}</p>
       <!-- Add Svelte components for each section here; add additional ifs accordingly -->
       {#if item.name === "Honduras"}
+        <img class="round-image" src={soledadIcon} alt="Soledad Castillo" />
+        <p>{item.description}</p>
         <BarChart />
       {:else if item.name === "Guatemala"}
+        <img class="round-image" src={busIcon} alt="destroyed bus" />
+        <p>{item.description}</p>
         <!-- <DotGraph /> -->
       {:else if item.name === "Mexico"}
+        <img
+          class="round-image"
+          src={coyoteIcon}
+          alt="packed migrants in a car"
+        />
+        <p>{item.description}</p>
         <Radar />
       {:else if item.name === "Texas"}
+        <img class="round-image" src={desertIcon} alt="Mexican desert" />
+        <p>{item.description}</p>
         <Pie2 />
       {:else if item.name === "California"}
+        <img
+          class="round-image"
+          src={gradIcon}
+          alt="Inspirational graduation cap"
+        />
+        <p>{item.description}</p>
         <Sankey />
       {/if}
     </div>
