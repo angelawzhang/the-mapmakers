@@ -74,10 +74,12 @@
         <img class="round-image" src={soledadIcon} alt="Soledad Castillo" />
         <p>{item.description}</p>
         <BarChart />
+        <div class="separator" />
       {:else if item.name === "Guatemala"}
         <img class="round-image" src={busIcon} alt="destroyed bus" />
         <p>{item.description}</p>
         <!-- <DotGraph /> -->
+        <div class="separator" />
       {:else if item.name === "Mexico"}
         <img
           class="round-image"
@@ -86,10 +88,12 @@
         />
         <p>{item.description}</p>
         <Radar />
+        <div class="separator" />
       {:else if item.name === "Texas"}
         <img class="round-image" src={desertIcon} alt="Mexican desert" />
         <p>{item.description}</p>
         <Pie2 />
+        <div class="separator" />
       {:else if item.name === "California"}
         <img
           class="round-image"
@@ -98,6 +102,7 @@
         />
         <p>{item.description}</p>
         <Sankey />
+        <div class="separator" />
       {/if}
     </div>
   {/each}

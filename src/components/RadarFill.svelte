@@ -43,7 +43,7 @@
   };
 </script>
 
-<g transform="translate({$width / 1.5}, {$height / 1.5})">
+<g transform="translate({$width / 1.8}, {$height / 1.5})">
   {#each $data as row}
     {@const xVals = $xGet(row)}
     <path
