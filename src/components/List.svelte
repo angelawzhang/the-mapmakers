@@ -8,6 +8,7 @@
   import Sankey from "./Sankey/Sankey.svelte";
   import BarChart from "./BarChart.svelte";
   import BarChart2 from "./BarChart2.svelte";
+  import DotGraph from "./DotGraph.svelte";
 
   let list;
   onMount(async () => {
@@ -48,9 +49,9 @@
       <p>{item.description}</p>
       <!-- Add Svelte components for each section here; add additional ifs accordingly -->
       {#if item.name === "Honduras"}
-        <BarChart />
+        <!-- <BarChart /> -->
       {:else if item.name === "Guatemala"}
-        <BarChart2 />
+        <DotGraph />
       {:else if item.name === "Mexico"}
         <Pie />
       {:else if item.name === "Texas"}
