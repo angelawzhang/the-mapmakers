@@ -46,7 +46,7 @@
     xRange={({ height }) => [0, height / 2]}
     {data}
   >
-    <Svg class="center-radar" viewBox="0 0 900 900">
+    <Svg class="center-radar" viewBox="0 0 670 670">
       <RadarAxis />
       <RadarFill />
     </Svg>
@@ -56,7 +56,7 @@
 <p>
   An overwhelming proportion of external migrations are still illegal—over 75%
   of people migrated illegally, whether that be with coyotes, caravans, or by
-  themselves. This is likely because it’s so difficult to obtain a visa or
+  themselves. This is likely because it's so difficult to obtain a visa or
   asylum, especially for citizens of the Northern Triangle trying to migrate to
   the United States. This “paper fortress” significantly limits legal options
   for migration, forcing many people to resort to illegal means.

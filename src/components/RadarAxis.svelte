@@ -26,7 +26,7 @@
   }
 </script>
 
-<g transform="translate({$width / 1.5}, {$height / 1.5})">
+<g transform="translate({$width / 1.8}, {$height / 1.5})">
   <circle
     cx="0"
     cy="0"
