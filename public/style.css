@@ -68,7 +68,7 @@ body {
  } */
 
  /* Button */
- .button-4 {
+ .button {
    appearance: none;
    background-color: #FAFBFC;
    border: 1px solid rgba(27, 31, 35, 0.15);
@@ -94,36 +94,33 @@ body {
    word-wrap: break-word;
  }
  
- .button-4:hover {
+ .button:hover {
    background-color: #F3F4F6;
    text-decoration: none;
    transition-duration: 0.1s;
  }
  
- .button-4:disabled {
+ .button:disabled {
    background-color: #FAFBFC;
    border-color: rgba(27, 31, 35, 0.15);
    color: #959DA5;
    cursor: default;
  }
  
- .button-4:active {
+ .button:active {
    background-color: #EDEFF2;
    box-shadow: rgba(225, 228, 232, 0.2) 0 1px 0 inset;
    transition: none 0s;
  }
  
- .button-4:focus {
+ .button:focus {
    outline: 1px transparent;
  }
  
- .button-4:before {
+ .button:before {
    display: none;
  }
  
- .button-4:-webkit-details-marker {
-   display: none;
- }
  /* List */
 
  #list-items {
@@ -249,12 +246,15 @@ body {
   }
 
   .tooltip-visible {
-    font: 20px sans-serif;
+    font: 14px sans-serif;
     font-family: "Lato", sans-serif;
     visibility: visible;
-    background-color: #E6C39C;
-    border-radius: 10px;
-    width: 200px;
+    background-color: #e1dedb;
+    border-radius: 5px;
+    border-color:rgba(161, 158, 158, 0.985);
+    border-width: 1px;
+    border-style: double;
+    width: 100px;
     color: black;
     position: absolute;
     padding: 10px;
